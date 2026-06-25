@@ -1,640 +1,602 @@
 /// ACTA Frontend — Simulation Setup Screen
 /// ==========================================
-/// Dedicated page for configuring and launching disaster
-/// simulations. Extends the existing ControlPanel with
-/// additional storm-track editor, scenario presets, and
-/// simulation history/comparison tools.
+/// Configure scenario profiles and parameters, then launch a
+/// simulation against the FastAPI backend.
+/// Renders as content inside AppShell (no Scaffold).
 ///
-/// Target Branch : feature/frontend-dashboard
+/// Target Branch : feat/dashboard
 library;
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// -----------------------------------------------------------
-// State Providers
-// -----------------------------------------------------------
-
-/// Selected scenario preset name (null = custom).
-final selectedPresetProvider = StateProvider<String?>((ref) => null);
-
-/// Storm track points for the editor.
-final stormTrackProvider = StateProvider<List<List<double>>>((ref) => [
-      [120.98, 14.60],
-      [120.95, 14.55],
-      [120.90, 14.50],
-    ]);
-
-/// History of previously-run simulations.
-final simulationHistoryProvider =
-    StateProvider<List<Map<String, dynamic>>>((ref) => []);
+import '../models/simulation_models.dart';
+import '../models/simulation_state.dart';
+import 'app_shell.dart';
 
 // -----------------------------------------------------------
-// Scenario Presets
+// Local providers
 // -----------------------------------------------------------
 
-const _scenarioPresets = <String, Map<String, dynamic>>{
-  'Tropical Depression': {
-    'wind_kph': 55.0,
-    'rain_mm': 100.0,
-    'prep_hours': 48,
-  },
-  'Tropical Storm': {
-    'wind_kph': 90.0,
-    'rain_mm': 200.0,
-    'prep_hours': 36,
-  },
-  'Severe Typhoon': {
-    'wind_kph': 150.0,
-    'rain_mm': 350.0,
-    'prep_hours': 24,
-  },
-  'Super Typhoon': {
-    'wind_kph': 220.0,
-    'rain_mm': 500.0,
-    'prep_hours': 12,
-  },
-};
+final _rainfallProvider = StateProvider<String>((ref) => '120');
+final _windSpeedProvider = StateProvider<String>((ref) => '65');
+final _prepWindowProvider = StateProvider<String>((ref) => '24 Hours');
+final _pumpingStatusProvider =
+    StateProvider<String>((ref) => '3 Offline');
+final _rescueAssetsProvider =
+    StateProvider<String>((ref) => '12 Boats Available');
+final _affectedDistrictProvider =
+    StateProvider<String>((ref) => 'All Districts (NCR)');
+final _notesProvider = StateProvider<String>((ref) => '');
 
 // -----------------------------------------------------------
-// Simulation Setup Screen
+// Simulation Setup Content
 // -----------------------------------------------------------
 
-class SimulationSetupScreen extends ConsumerStatefulWidget {
-  const SimulationSetupScreen({super.key});
+class SimulationSetupContent extends ConsumerStatefulWidget {
+  const SimulationSetupContent({super.key});
 
   @override
-  ConsumerState<SimulationSetupScreen> createState() =>
-      _SimulationSetupScreenState();
+  ConsumerState<SimulationSetupContent> createState() =>
+      _SimulationSetupContentState();
 }
 
-class _SimulationSetupScreenState
-    extends ConsumerState<SimulationSetupScreen> {
-  final _windController = TextEditingController(text: '80.0');
-  final _rainController = TextEditingController(text: '200.0');
-  double _prepWindow = 36;
+class _SimulationSetupContentState
+    extends ConsumerState<SimulationSetupContent> {
+  late final TextEditingController _rainfallCtrl;
+  late final TextEditingController _windCtrl;
+  late final TextEditingController _notesCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _rainfallCtrl = TextEditingController(
+        text: ref.read(_rainfallProvider));
+    _windCtrl =
+        TextEditingController(text: ref.read(_windSpeedProvider));
+    _notesCtrl =
+        TextEditingController(text: ref.read(_notesProvider));
+  }
 
   @override
   void dispose() {
-    _windController.dispose();
-    _rainController.dispose();
+    _rainfallCtrl.dispose();
+    _windCtrl.dispose();
+    _notesCtrl.dispose();
     super.dispose();
   }
 
-  /// Apply a scenario preset to the input fields.
-  void _applyPreset(String name) {
-    final preset = _scenarioPresets[name];
-    if (preset == null) return;
+  Future<void> _runSimulation() async {
+    final profile = ref.read(simProfileProvider);
+    final rainfall = double.tryParse(_rainfallCtrl.text) ?? 120.0;
+    final wind = double.tryParse(_windCtrl.text) ?? 65.0;
+    final prepWindow =
+        int.tryParse(ref.read(_prepWindowProvider).split(' ').first) ?? 24;
 
-    setState(() {
-      _windController.text = (preset['wind_kph'] as double).toStringAsFixed(1);
-      _rainController.text = (preset['rain_mm'] as double).toStringAsFixed(1);
-      _prepWindow = (preset['prep_hours'] as int).toDouble();
-    });
-    ref.read(selectedPresetProvider.notifier).state = name;
+    // Save snapshot for display in run screen
+    ref.read(simulationInputSnapshotProvider.notifier).state = {
+      'profile': profile.label,
+      'rainfall_mm': rainfall,
+      'wind_kph': wind,
+      'prep_hours': prepWindow,
+      'affected_districts': ref.read(_affectedDistrictProvider),
+      'pumping_status': ref.read(_pumpingStatusProvider),
+      'rescue_assets': ref.read(_rescueAssetsProvider),
+    };
+
+    ref.read(simulationRunStateProvider.notifier).state =
+        SimulationRunState.running;
+    ref.read(runSimulationActiveProvider.notifier).state = true;
+    ref.read(shellIndexProvider.notifier).state = 1;
+
+    try {
+      final dio = Dio(BaseOptions(
+        baseUrl: 'http://localhost:8000',
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 60),
+      ));
+
+      final response = await dio.post(
+        '/api/v1/simulation/run',
+        data: {
+          'wind_speed_kph': wind,
+          'precipitation_24h_mm': rainfall,
+          'preparation_window_hours': prepWindow,
+          'storm_track_points': [
+            [120.98, 14.60],
+            [120.95, 14.55],
+            [120.90, 14.50],
+          ],
+        },
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        ref.read(simulationResultProvider.notifier).state =
+            SimulationOutput.fromJson(
+                response.data as Map<String, dynamic>);
+      }
+      ref.read(simulationRunStateProvider.notifier).state =
+          SimulationRunState.completed;
+    } on DioException catch (e) {
+      ref.read(simulationErrorProvider.notifier).state =
+          e.response?.data?['detail']?.toString() ??
+              'Connection error: ${e.message}';
+      ref.read(simulationRunStateProvider.notifier).state =
+          SimulationRunState.error;
+    } catch (e) {
+      ref.read(simulationErrorProvider.notifier).state = e.toString();
+      ref.read(simulationRunStateProvider.notifier).state =
+          SimulationRunState.error;
+    }
   }
 
-  /// Clear preset and reset to defaults.
-  void _clearPreset() {
-    ref.read(selectedPresetProvider.notifier).state = null;
+  void _resetParameters() {
+    ref.read(simProfileProvider.notifier).state =
+        SimProfile.hydrologicFlood;
+    _rainfallCtrl.text = '120';
+    _windCtrl.text = '65';
+    _notesCtrl.text = '';
+    ref.read(_rainfallProvider.notifier).state = '120';
+    ref.read(_windSpeedProvider.notifier).state = '65';
+    ref.read(_prepWindowProvider.notifier).state = '24 Hours';
+    ref.read(_pumpingStatusProvider.notifier).state = '3 Offline';
+    ref.read(_rescueAssetsProvider.notifier).state =
+        '12 Boats Available';
+    ref.read(_affectedDistrictProvider.notifier).state =
+        'All Districts (NCR)';
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isWide = screenWidth > 1200;
-
-    return Scaffold(
-      appBar: _buildAppBar(theme),
-      body: isWide
-          ? _buildWideLayout(theme)
-          : _buildNarrowLayout(theme),
-    );
-  }
-
-  // ---------------------------------------------------------
-  // App Bar
-  // ---------------------------------------------------------
-
-  PreferredSizeWidget _buildAppBar(ThemeData theme) {
-    return AppBar(
-      title: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              Icons.science_outlined,
-              color: theme.colorScheme.primary,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Text('Simulation Setup'),
-          const SizedBox(width: 8),
-          Text(
-            '— Configure & Launch',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey[500],
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------
-  // Wide Layout (Desktop)
-  // ---------------------------------------------------------
-
-  Widget _buildWideLayout(ThemeData theme) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Column(
       children: [
-        // Left: Scenario Presets
-        SizedBox(
-          width: 300,
-          child: _buildPresetsPanel(theme),
+        PageHeader(
+          title: 'Simulation Setup',
+          subtitle:
+              'Configure scenario parameters and run predictive models and assess resource readiness.',
         ),
-
-        // Center: Parameter Configuration
         Expanded(
-          flex: 2,
-          child: _buildParameterPanel(theme),
-        ),
-
-        // Right: Storm Track Editor & History
-        SizedBox(
-          width: 400,
-          child: _buildStormTrackPanel(theme),
-        ),
-      ],
-    );
-  }
-
-  // ---------------------------------------------------------
-  // Narrow Layout (Mobile / Tablet)
-  // ---------------------------------------------------------
-
-  Widget _buildNarrowLayout(ThemeData theme) {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          _buildPresetsPanel(theme),
-          _buildParameterPanel(theme),
-          _buildStormTrackPanel(theme),
-        ],
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------
-  // Scenario Presets Panel
-  // ---------------------------------------------------------
-
-  Widget _buildPresetsPanel(ThemeData theme) {
-    final selected = ref.watch(selectedPresetProvider);
-
-    return Container(
-      margin: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF2A2E36), width: 1),
-      ),
-      child: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          // Header
-          Row(
-            children: [
-              Icon(Icons.folder_special_outlined,
-                  color: theme.colorScheme.primary, size: 20),
-              const SizedBox(width: 10),
-              const Text(
-                'Scenario Presets',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Select a pre-configured scenario or create a custom simulation.',
-            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-          ),
-
-          const SizedBox(height: 20),
-
-          // Preset cards
-          ..._scenarioPresets.entries.map((entry) {
-            final isSelected = selected == entry.key;
-            final preset = entry.value;
-            final wind = preset['wind_kph'] as double;
-            final Color intensityColor;
-            if (wind >= 200) {
-              intensityColor = const Color(0xFFEF5350);
-            } else if (wind >= 120) {
-              intensityColor = const Color(0xFFFF7043);
-            } else if (wind >= 70) {
-              intensityColor = const Color(0xFFFFB74D);
-            } else {
-              intensityColor = const Color(0xFF66BB6A);
-            }
-
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: InkWell(
-                onTap: () => _applyPreset(entry.key),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? theme.colorScheme.primary.withValues(alpha: 0.1)
-                        : const Color(0xFF1A1D23),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isSelected
-                          ? theme.colorScheme.primary.withValues(alpha: 0.5)
-                          : const Color(0xFF2A2E36),
-                      width: isSelected ? 2 : 1,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 4,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: intensityColor,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              entry.key,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${wind.toStringAsFixed(0)} kph · ${(preset['rain_mm'] as double).toStringAsFixed(0)} mm · T-${preset['prep_hours']}h',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey[500],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (isSelected)
-                        Icon(Icons.check_circle,
-                            size: 18, color: theme.colorScheme.primary),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }),
-
-          const SizedBox(height: 12),
-
-          // Custom mode
-          OutlinedButton.icon(
-            onPressed: _clearPreset,
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: Color(0xFF3A3F4B)),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
-            icon: const Icon(Icons.edit_outlined, size: 18),
-            label: const Text('Custom Configuration'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------
-  // Parameter Configuration Panel
-  // ---------------------------------------------------------
-
-  Widget _buildParameterPanel(ThemeData theme) {
-    return Container(
-      margin: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF2A2E36), width: 1),
-      ),
-      child: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          // Header
-          Row(
-            children: [
-              Icon(Icons.tune, color: theme.colorScheme.primary, size: 20),
-              const SizedBox(width: 10),
-              const Text(
-                'Meteorological Parameters',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Fine-tune weather inputs for the simulation engine.',
-            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Wind Speed
-          _buildFieldLabel('Wind Speed', 'kph', Icons.air),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _windController,
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
-            ],
-            decoration: const InputDecoration(
-              hintText: 'e.g., 120.5',
-              suffixText: 'kph',
-            ),
-            onChanged: (_) => _clearPreset(),
-          ),
-
-          const SizedBox(height: 20),
-
-          // Precipitation
-          _buildFieldLabel(
-              '24h Precipitation', 'mm', Icons.water_drop_outlined),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _rainController,
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
-            ],
-            decoration: const InputDecoration(
-              hintText: 'e.g., 350.0',
-              suffixText: 'mm',
-            ),
-            onChanged: (_) => _clearPreset(),
-          ),
-
-          const SizedBox(height: 28),
-
-          // Preparation Window Slider
-          _buildFieldLabel(
-            'Preparation Window',
-            '${_prepWindow.round()}h',
-            Icons.timer_outlined,
-          ),
-          const SizedBox(height: 12),
-          SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              trackHeight: 6,
-              thumbShape:
-                  const RoundSliderThumbShape(enabledThumbRadius: 10),
-            ),
-            child: Slider(
-              value: _prepWindow,
-              min: 1,
-              max: 96,
-              divisions: 95,
-              label: '${_prepWindow.round()} hours',
-              onChanged: (value) {
-                setState(() => _prepWindow = value);
-                _clearPreset();
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('1h',
-                    style: TextStyle(fontSize: 10, color: Colors.grey[600])),
-                Text('24h',
-                    style: TextStyle(fontSize: 10, color: Colors.grey[600])),
-                Text('48h',
-                    style: TextStyle(fontSize: 10, color: Colors.grey[600])),
-                Text('96h',
-                    style: TextStyle(fontSize: 10, color: Colors.grey[600])),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 32),
-
-          // Launch Simulation
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                // TODO: Execute simulation via backend API
-              },
-              icon: const Icon(Icons.rocket_launch_outlined, size: 22),
-              label: const Text('Launch Simulation'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------
-  // Storm Track & History Panel
-  // ---------------------------------------------------------
-
-  Widget _buildStormTrackPanel(ThemeData theme) {
-    final trackPoints = ref.watch(stormTrackProvider);
-
-    return Container(
-      margin: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF2A2E36), width: 1),
-      ),
-      child: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          // Storm Track Header
-          Row(
-            children: [
-              Icon(Icons.route_outlined,
-                  color: theme.colorScheme.primary, size: 20),
-              const SizedBox(width: 10),
-              const Expanded(
-                child: Text(
-                  'Storm Track',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              Text(
-                '${trackPoints.length} waypoints',
-                style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Define projected storm trajectory waypoints.',
-            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Waypoint list
-          ...trackPoints.asMap().entries.map((entry) {
-            final idx = entry.key;
-            final pt = entry.value;
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A1D23),
-                borderRadius: BorderRadius.circular(10),
-                border: const Border(
-                  left: BorderSide(color: Color(0xFF00BFA6), width: 3),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    'WP ${idx + 1}',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: theme.colorScheme.primary,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      '${pt[0].toStringAsFixed(4)}°E, ${pt[1].toStringAsFixed(4)}°N',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.close,
-                        size: 16, color: Colors.grey[600]),
-                    onPressed: () {
-                      // TODO: Remove waypoint
-                    },
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
-              ),
-            );
-          }),
-
-          const SizedBox(height: 8),
-
-          OutlinedButton.icon(
-            onPressed: () {
-              // TODO: Add waypoint via map tap or manual input
-            },
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.3)),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-            icon: const Icon(Icons.add_location_alt_outlined, size: 18),
-            label: const Text('Add Waypoint'),
-          ),
-
-          const SizedBox(height: 32),
-
-          // Simulation History
-          Row(
-            children: [
-              Icon(Icons.history, size: 15, color: Colors.grey[500]),
-              const SizedBox(width: 8),
-              const Text(
-                'Recent Simulations',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.inbox_outlined, size: 32, color: Colors.grey[700]),
-                const SizedBox(height: 8),
-                Text(
-                  'No simulation history yet',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                // 1. Profile Selection
+                const Text('1. Select Simulation Profile',
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF111827))),
+                const SizedBox(height: 14),
+                _ProfileSelector(),
+                const SizedBox(height: 28),
+
+                // 2. Parameters
+                const Text('2. Set Scenario Parameters',
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF111827))),
+                const SizedBox(height: 14),
+                _ParametersForm(
+                  rainfallCtrl: _rainfallCtrl,
+                  windCtrl: _windCtrl,
+                  notesCtrl: _notesCtrl,
                 ),
+                const SizedBox(height: 32),
+
+                // Footer buttons
+                Row(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _resetParameters,
+                      icon: const Icon(Icons.refresh, size: 15),
+                      label: const Text('Reset Parameters'),
+                    ),
+                    const Spacer(),
+                    ElevatedButton.icon(
+                      onPressed: _runSimulation,
+                      icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                      label: const Text('Run Simulation'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF16A34A),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 14),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------
-  // Reusable Field Label
-  // ---------------------------------------------------------
-
-  Widget _buildFieldLabel(String title, String suffix, IconData icon) {
-    return Row(
-      children: [
-        Icon(icon, size: 15, color: Colors.grey[500]),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const Spacer(),
-        Text(
-          suffix,
-          style: TextStyle(
-            fontSize: 11,
-            color: Theme.of(context).colorScheme.primary,
-            fontWeight: FontWeight.w600,
           ),
         ),
       ],
     );
   }
 }
+
+// -----------------------------------------------------------
+// Profile Selector
+// -----------------------------------------------------------
+
+class _ProfileSelector extends ConsumerWidget {
+  static const _profiles = [
+    _Profile(
+      SimProfile.hydrologicFlood,
+      'Hydrologic Flood',
+      Icons.flood_outlined,
+      Color(0xFF0EA5E9),
+      'Rainfall-induced flooding, river overflow, and drainage inundation.',
+    ),
+    _Profile(
+      SimProfile.earthquake,
+      'Earthquake',
+      Icons.foundation_outlined,
+      Color(0xFF374151),
+      'Earthquake-induced structural damage, infrastructure disruption, and emergency response simulation.',
+    ),
+    _Profile(
+      SimProfile.virusOutbreak,
+      'Virus Outbreak',
+      Icons.coronavirus_outlined,
+      Color(0xFF374151),
+      'Disease outbreak spread simulation and response planning.',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selected = ref.watch(simProfileProvider);
+
+    return Row(
+      children: _profiles.map((p) {
+        final isSelected = selected == p.value;
+        return Expanded(
+          child: Padding(
+            padding:
+                EdgeInsets.only(right: p == _profiles.last ? 0 : 12),
+            child: _ProfileCard(
+              profile: p,
+              isSelected: isSelected,
+              onTap: () =>
+                  ref.read(simProfileProvider.notifier).state = p.value,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _Profile {
+  final SimProfile value;
+  final String label;
+  final IconData icon;
+  final Color iconColor;
+  final String description;
+
+  const _Profile(
+      this.value, this.label, this.icon, this.iconColor, this.description);
+}
+
+class _ProfileCard extends StatelessWidget {
+  final _Profile profile;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _ProfileCard(
+      {required this.profile,
+      required this.isSelected,
+      required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF0EA5E9)
+                : const Color(0xFFE5E7EB),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: profile.iconColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(profile.icon,
+                      size: 24, color: profile.iconColor),
+                ),
+                const Spacer(),
+                Radio<SimProfile>(
+                  value: profile.value,
+                  groupValue:
+                      isSelected ? profile.value : null,
+                  onChanged: (_) => onTap(),
+                  activeColor: const Color(0xFF0EA5E9),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(profile.label,
+                style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF111827))),
+            const SizedBox(height: 4),
+            Text(profile.description,
+                style: const TextStyle(
+                    fontSize: 12, color: Color(0xFF6B7280), height: 1.4)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// -----------------------------------------------------------
+// Parameters Form
+// -----------------------------------------------------------
+
+class _ParametersForm extends ConsumerWidget {
+  final TextEditingController rainfallCtrl;
+  final TextEditingController windCtrl;
+  final TextEditingController notesCtrl;
+
+  const _ParametersForm({
+    required this.rainfallCtrl,
+    required this.windCtrl,
+    required this.notesCtrl,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final prepWindow = ref.watch(_prepWindowProvider);
+    final pumpingStatus = ref.watch(_pumpingStatusProvider);
+    final rescueAssets = ref.watch(_rescueAssetsProvider);
+    final affectedDistricts = ref.watch(_affectedDistrictProvider);
+    var notesLength = ref.watch(_notesProvider).length;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Row 1: Rainfall | Wind | Districts
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _paramField(
+                  label: 'Rainfall Volume (mm/hr)',
+                  hint: '120',
+                  helper: 'Typical range 20 - 300mm',
+                  controller: rainfallCtrl,
+                  suffix: 'mm',
+                  isNumeric: true,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _paramField(
+                  label: 'Wind Speed (km/h)',
+                  hint: '65',
+                  helper: 'Typical range 10 - 150 km/h',
+                  controller: windCtrl,
+                  suffix: 'km/h',
+                  isNumeric: true,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _paramDropdown(
+                  label: 'Affected District(s)',
+                  helper: 'Select one or more districts',
+                  value: affectedDistricts,
+                  items: const [
+                    'All Districts (NCR)',
+                    'Tondo',
+                    'Sampaloc',
+                    'Pandacan',
+                    'Paco',
+                    'Malate',
+                    'Ermita',
+                    'Binondo',
+                    'Santa Cruz',
+                  ],
+                  onChanged: (v) => ref
+                      .read(_affectedDistrictProvider.notifier)
+                      .state = v!,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // Row 2: Prep Window | Pumping | Rescue
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _paramDropdown(
+                  label: 'Preparation Window',
+                  helper: 'Time available before impact',
+                  value: prepWindow,
+                  items: const [
+                    '6 Hours',
+                    '12 Hours',
+                    '24 Hours',
+                    '48 Hours',
+                    '72 Hours',
+                  ],
+                  onChanged: (v) =>
+                      ref.read(_prepWindowProvider.notifier).state = v!,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _paramDropdown(
+                  label: 'Pumping Station Status',
+                  helper: 'Select current operational status',
+                  value: pumpingStatus,
+                  items: const [
+                    'All Online',
+                    '1 Offline',
+                    '2 Offline',
+                    '3 Offline',
+                    '4+ Offline',
+                  ],
+                  onChanged: (v) =>
+                      ref.read(_pumpingStatusProvider.notifier).state = v!,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _paramDropdown(
+                  label: 'Rescue Asset Availability',
+                  helper: 'Select available rescue assets',
+                  value: rescueAssets,
+                  items: const [
+                    '4 Boats Available',
+                    '8 Boats Available',
+                    '12 Boats Available',
+                    '16+ Boats Available',
+                  ],
+                  onChanged: (v) =>
+                      ref.read(_rescueAssetsProvider.notifier).state = v!,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // Notes
+          const Text('Additional Notes (Optional)',
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF374151))),
+          const SizedBox(height: 8),
+          TextField(
+            controller: notesCtrl,
+            maxLines: 4,
+            maxLength: 250,
+            onChanged: (v) =>
+                ref.read(_notesProvider.notifier).state = v,
+            decoration: const InputDecoration(
+              hintText: 'Add any scenario assumptions or notes...',
+              counterText: '',
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              '$notesLength / 250',
+              style: const TextStyle(
+                  fontSize: 11, color: Color(0xFF9CA3AF)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _paramField({
+    required String label,
+    required String hint,
+    required String helper,
+    required TextEditingController controller,
+    String? suffix,
+    bool isNumeric = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF374151))),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          keyboardType:
+              isNumeric ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
+          inputFormatters: isNumeric
+              ? [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))]
+              : null,
+          decoration: InputDecoration(
+            hintText: hint,
+            suffixText: suffix,
+            suffixStyle: const TextStyle(
+                color: Color(0xFF6B7280), fontSize: 12),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(helper,
+            style: const TextStyle(
+                fontSize: 11, color: Color(0xFF9CA3AF))),
+      ],
+    );
+  }
+
+  Widget _paramDropdown({
+    required String label,
+    required String helper,
+    required String value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF374151))),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          value: value,
+          onChanged: onChanged,
+          decoration: const InputDecoration(),
+          style: const TextStyle(
+              fontSize: 13, color: Color(0xFF111827)),
+          icon: const Icon(Icons.keyboard_arrow_down,
+              color: Color(0xFF6B7280), size: 18),
+          items: items
+              .map((i) => DropdownMenuItem(value: i, child: Text(i)))
+              .toList(),
+        ),
+        const SizedBox(height: 4),
+        Text(helper,
+            style: const TextStyle(
+                fontSize: 11, color: Color(0xFF9CA3AF))),
+      ],
+    );
+  }
+}
+
+
