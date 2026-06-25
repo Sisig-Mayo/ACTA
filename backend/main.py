@@ -21,7 +21,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.routes import routing, simulation
+from app.routes import auth, routing, simulation
 
 # -----------------------------------------------------------
 # Logging
@@ -50,6 +50,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("   Database URL configured: %s", bool(settings.SUPABASE_DATABASE_URL))
     logger.info("   Gemini API key configured: %s", bool(settings.GEMINI_API_KEY))
     yield
+    # Close database pool for auth if created
+    from app.routes.auth import _pool
+    if _pool is not None:
+        await _pool.close()
+        logger.info("Auth Database connection pool closed.")
     logger.info("🛑 ACTA Backend shutting down gracefully.")
 
 
@@ -84,6 +89,12 @@ app.add_middleware(
 # -----------------------------------------------------------
 # Router Registration
 # -----------------------------------------------------------
+
+app.include_router(
+    auth.router,
+    prefix="/api/v1/auth",
+    tags=["Authentication"],
+)
 
 app.include_router(
     simulation.router,
