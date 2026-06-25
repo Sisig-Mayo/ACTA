@@ -100,6 +100,14 @@ class BarangayImpact {
       centroid: (json['centroid'] as List).map((e) => (e as num).toDouble()).toList(),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'barangay_name': barangayName,
+        'district': district,
+        'zone_status': zoneStatus.name.toUpperCase(),
+        'coverage_pct': coveragePct,
+        'centroid': centroid,
+      };
 }
 
 /// A single time-decayed action item.
@@ -124,6 +132,13 @@ class TaskItem {
       category: json['category'] as String,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'priority': priority,
+        'action': action,
+        'deadline_hours': deadlineHours,
+        'category': category,
+      };
 }
 
 /// Gemini-generated plain-language explanation.
@@ -148,6 +163,13 @@ class ExplainabilityCard {
       confidenceNote: json['confidence_note'] as String,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'summary': summary,
+        'risk_narrative': riskNarrative,
+        'action_rationale': actionRationale,
+        'confidence_note': confidenceNote,
+      };
 }
 
 /// Complete simulation response from the backend.
@@ -184,6 +206,15 @@ class SimulationOutput {
       metadata: json['metadata'] as Map<String, dynamic>? ?? {},
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'severity_tier': severityTier.name.toUpperCase(),
+        'preparation_window_hours': preparationWindowHours,
+        'impacted_barangays': impactedBarangays.map((e) => e.toJson()).toList(),
+        'task_list': taskList.map((e) => e.toJson()).toList(),
+        'explainability_card': explainabilityCard.toJson(),
+        'metadata': metadata,
+      };
 
   /// Count of RED-zone barangays.
   int get redZoneCount =>
