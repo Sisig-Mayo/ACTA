@@ -48,9 +48,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger("acta.seed")
 
-# Load environment variables from root .env file.
+# Load environment variables from backend/.env file.
 ROOT_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(ROOT_DIR / ".env")
+load_dotenv(ROOT_DIR / "backend" / ".env")
 
 DATABASE_URL: str = os.getenv("SUPABASE_DATABASE_URL", "")
 
