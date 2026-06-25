@@ -38,11 +38,6 @@ class SafeRouteRequest(BaseModel):
     start_lat: float = Field(..., ge=-90, le=90, description="Origin latitude.")
     end_lng: float = Field(..., ge=-180, le=180, description="Destination longitude.")
     end_lat: float = Field(..., ge=-90, le=90, description="Destination latitude.")
-    flood_zone_wkt: str = Field(
-        ...,
-        description="WKT geometry string representing active flood zones.",
-        examples=["POLYGON((120.95 14.55, 120.98 14.55, 120.98 14.58, 120.95 14.58, 120.95 14.55))"],
-    )
 
 
 class RouteWaypoint(BaseModel):
@@ -94,7 +89,6 @@ async def compute_safe_route(payload: SafeRouteRequest) -> SafeRouteResponse:
             start_lat=payload.start_lat,
             end_lng=payload.end_lng,
             end_lat=payload.end_lat,
-            flood_zone_wkt=payload.flood_zone_wkt,
         )
 
         total_cost = waypoints[-1]["agg_cost"] if waypoints else 0
