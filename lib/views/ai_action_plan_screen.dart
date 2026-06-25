@@ -71,6 +71,17 @@ class _AiActionPlanContentState extends ConsumerState<AiActionPlanContent> {
           subtitle:
               'AI-generated, prioritized actions based on the simulation results',
           actions: [
+            OutlinedButton.icon(
+              onPressed: () {
+                ref.read(simulationRunStateProvider.notifier).state = SimulationRunState.idle;
+                ref.read(simulationResultProvider.notifier).state = null;
+                ref.read(simulationRunIdProvider.notifier).state = null;
+                ref.read(shellIndexProvider.notifier).state = 1;
+              },
+              icon: const Icon(Icons.refresh, size: 15),
+              label: const Text('New Simulation'),
+            ),
+            const SizedBox(width: 12),
             ElevatedButton.icon(
               onPressed: simResult != null
                   ? () => ref
