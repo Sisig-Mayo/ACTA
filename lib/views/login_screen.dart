@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
 
 import '../models/user_profile.dart';
-import 'dashboard_screen.dart';
+import 'app_shell.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -66,7 +66,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
         if (mounted) {
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const DashboardScreen()),
+            MaterialPageRoute(builder: (context) => const AppShell()),
           );
         }
       } else {
@@ -103,7 +103,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           );
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const DashboardScreen()),
+            MaterialPageRoute(builder: (context) => const AppShell()),
           );
         }
       }
