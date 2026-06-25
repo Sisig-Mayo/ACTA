@@ -39,7 +39,6 @@ class ActaApp extends StatelessWidget {
     const surfaceColor = Color(0xFF1A1D23);     // Deep charcoal
     const cardColor = Color(0xFF22262E);        // Elevated surface
     const errorColor = Color(0xFFFF5252);       // Alert red
-    const warningColor = Color(0xFFFFB74D);     // Warning amber
 
     return ThemeData(
       useMaterial3: true,
