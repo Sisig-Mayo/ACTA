@@ -482,7 +482,7 @@ class _MasterPlanBody extends ConsumerWidget {
           decoration: BoxDecoration(
             color: bg,
             borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: color.withOpacity(0.2)),
+            border: Border.all(color: color.withValues(alpha: 0.2)),
           ),
           child: Text(
             priority,
