@@ -16,7 +16,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Response
 
 from app.core.gemini import generate_explainability_card
 from app.models.simulation import (
@@ -29,6 +29,9 @@ from app.models.simulation import (
     ZoneStatus,
 )
 from app.services.decay_engine import generate_time_decay_tasks
+from app.services.gee_engine import simulate_hazard_boundaries
+from app.services.pdf_generator import generate_master_action_plan
+from app.services.dispatch import execute_action_plan
 
 logger = logging.getLogger("acta.routes.simulation")
 
@@ -167,7 +170,13 @@ async def run_simulation(payload: SimulationInput) -> SimulationOutput:
         )
         logger.info("Severity classified: %s", severity.value)
 
-        # 2. Assess barangay impacts.
+        # 2. Assess barangay impacts (using GEE if configured).
+        gee_data = await simulate_hazard_boundaries(
+            payload.wind_speed_kph,
+            payload.precipitation_24h_mm,
+            payload.storm_track_points,
+        )
+        
         impacted_barangays = _simulate_barangay_impacts(
             severity, payload.storm_track_points
         )
@@ -224,6 +233,7 @@ async def run_simulation(payload: SimulationInput) -> SimulationOutput:
                 "red_zone_count": sum(
                     1 for b in impacted_barangays if b.zone_status == ZoneStatus.RED
                 ),
+                "gee_rendering": gee_data,
             },
         )
 
@@ -239,4 +249,66 @@ async def run_simulation(payload: SimulationInput) -> SimulationOutput:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Simulation engine error: {str(e)}",
+        )
+
+
+# -----------------------------------------------------------
+# POST /api/v1/simulation/export-pdf
+# -----------------------------------------------------------
+
+@router.post(
+    "/export-pdf",
+    status_code=status.HTTP_200_OK,
+    summary="Generate Master Action Plan PDF",
+    description=(
+        "Synthesize simulation output into a downloadable offline-ready "
+        "Master Action Plan PDF containing the executive summary, task ledger, "
+        "and risk matrices."
+    ),
+)
+async def export_pdf_blueprint(payload: SimulationOutput) -> Response:
+    """Generate and return a PDF blueprint from simulation data."""
+    logger.info("PDF Blueprint generation requested.")
+    try:
+        pdf_bytes = generate_master_action_plan(payload)
+        
+        return Response(
+            content=bytes(pdf_bytes),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": 'attachment; filename="ACTA_Action_Plan.pdf"'
+            }
+        )
+    except Exception as e:
+        logger.error("PDF generation failed: %s", e, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"PDF generation error: {str(e)}",
+        )
+
+
+# -----------------------------------------------------------
+# POST /api/v1/simulation/dispatch
+# -----------------------------------------------------------
+
+@router.post(
+    "/dispatch",
+    status_code=status.HTTP_200_OK,
+    summary="Approve and Execute Plan",
+    description=(
+        "Finalize and execute the action plan. Simulates distributing digital "
+        "Action Cards to field responders and pushing geofences."
+    ),
+)
+async def dispatch_plan(payload: dict[str, Any]) -> dict[str, Any]:
+    """Execute action plan and dispatch resources."""
+    logger.info("Plan execution dispatch requested.")
+    try:
+        manifest = await execute_action_plan(payload)
+        return manifest
+    except Exception as e:
+        logger.error("Execution dispatch failed: %s", e, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Dispatch error: {str(e)}",
         )

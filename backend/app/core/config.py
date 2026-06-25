@@ -51,6 +51,10 @@ class Settings(BaseSettings):
     # --- Google Gemini AI ---
     GEMINI_API_KEY: str = ""
 
+    # --- Google Earth Engine & Maps ---
+    GEE_SERVICE_ACCOUNT_FILE: str = ""
+    GOOGLE_MAPS_API_KEY: str = ""
+
     # --- CORS ---
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:8080"
 
