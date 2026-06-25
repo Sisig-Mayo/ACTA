@@ -113,16 +113,25 @@ async def run_simulation_pipeline(
             "storm_radius_km": payload.storm_radius_km,
         }
 
-        # Pass RED and YELLOW barangays to Gemini for comprehensive context
-        impacted = [
-            s["barangay_name"] 
-            for s in scores 
-            if s["risk_tier"] in ("RED", "YELLOW")
-        ]
+        # Map population from barangay_geometries to impacted list
+        pop_map = {bg["barangay_name"]: bg.get("population", 0) for bg in barangay_geometries}
+
+        # Pass RED and YELLOW barangays to Gemini for comprehensive context, including population
+        impacted = []
+        for s in scores:
+            if s["risk_tier"] in ("RED", "YELLOW"):
+                b_name = s["barangay_name"]
+                pop = pop_map.get(b_name, 0)
+                impacted.append({
+                    "barangay_name": b_name,
+                    "risk_tier": s["risk_tier"],
+                    "population": pop,
+                })
         
-        card_data = await generate_explainability_card(
+        # We will modify generate_explainability_card to also generate the task list
+        gemini_result = await generate_explainability_card(
             simulation_context=simulation_context,
-            task_list=raw_tasks,
+            base_tasks=raw_tasks,  # Pass decay_engine tasks as base guidelines
             impacted_barangays=impacted,
         )
 
@@ -138,8 +147,8 @@ async def run_simulation_pipeline(
                 "total_red_zones": summary["red_zones"],
                 "total_yellow_zones": summary["yellow_zones"],
                 "total_green_zones": summary["green_zones"],
-                "explainability_card": card_data,
-                "task_list": raw_tasks,
+                "explainability_card": gemini_result.get("explainability_card", {}),
+                "task_list": gemini_result.get("tasks", raw_tasks),  # Fallback to raw_tasks if missing
             }
         )
         logger.info("Simulation pipeline for run %s completed successfully.", run_id)
@@ -157,6 +166,7 @@ async def _fetch_all_barangay_geometries() -> list[dict[str, Any]]:
             id,
             barangay_name,
             district,
+            population,
             ST_AsGeoJSON(geom) AS geom_geojson
         FROM barangays;
     """
@@ -169,6 +179,7 @@ async def _fetch_all_barangay_geometries() -> list[dict[str, Any]]:
                 "id": row["id"],
                 "barangay_name": row["barangay_name"],
                 "district": row["district"],
+                "population": row.get("population", 0),
                 "geom_geojson": row["geom_geojson"],
             }
             for row in rows
