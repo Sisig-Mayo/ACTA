@@ -58,6 +58,9 @@ class Settings(BaseSettings):
     # --- CORS ---
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:8080"
 
+    # --- Caching (Optional) ---
+    REDIS_URL: str = ""
+
     @property
     def cors_origins_list(self) -> list[str]:
         """Parse comma-separated CORS origins into a list."""

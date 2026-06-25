@@ -96,8 +96,10 @@ def parse_geojson(filepath: Path) -> list[dict[str, Any]]:
         geometry = feature.get("geometry", {})
 
         # Extract barangay name — try common property key variants.
+        # The official Manila GeoJSON uses 'adm4_name' as the primary key.
         barangay_name = (
-            props.get("barangay_name")
+            props.get("adm4_name")
+            or props.get("barangay_name")
             or props.get("NAME")
             or props.get("name")
             or props.get("BARANGAY")
@@ -105,8 +107,10 @@ def parse_geojson(filepath: Path) -> list[dict[str, Any]]:
             or f"Unknown_Barangay_{idx}"
         )
 
+        # District maps to 'adm2_name' in the official data.
         district = (
-            props.get("district")
+            props.get("adm2_name")
+            or props.get("district")
             or props.get("DISTRICT")
             or props.get("adm3_en")
             or "Unspecified"
@@ -233,8 +237,9 @@ def main() -> None:
     parser.add_argument(
         "--file",
         type=str,
-        required=True,
-        help="Path to the manila.geojson file (e.g., ../data/raw/manila.geojson).",
+        required=False,
+        default=str(ROOT_DIR / "backend" / "data" / "raw" / "manila.geojson"),
+        help="Path to the manila.geojson file (default: backend/data/raw/manila.geojson).",
     )
     parser.add_argument(
         "--dry-run",

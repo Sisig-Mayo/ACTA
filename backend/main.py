@@ -21,6 +21,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+from app.routes import routing, simulation
+from app.services.bypass_router import close_pool
 from app.routes import auth, routing, simulation
 
 # -----------------------------------------------------------
@@ -56,6 +58,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await _pool.close()
         logger.info("Auth Database connection pool closed.")
     logger.info("🛑 ACTA Backend shutting down gracefully.")
+    await close_pool()
 
 
 # -----------------------------------------------------------
