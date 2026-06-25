@@ -23,6 +23,15 @@ from app.core.supabase_client import (
     bulk_insert_risk_scores,
     update_simulation_status,
 )
+from app.core.pagasa_constants import (
+    determine_severity,
+    classify_wind,
+    classify_rainfall,
+    classify_prep_window,
+    WIND_LABELS,
+    RAINFALL_TIERS,
+    PHASE_LABELS,
+)
 from app.models.simulation import SimulationInput
 from app.services.bypass_router import _get_pool
 from app.services.decay_engine import generate_time_decay_tasks
@@ -60,8 +69,13 @@ async def run_simulation_pipeline(
         scores = gee_result["scores"]
         summary = gee_result["summary"]
         
-        # Determine overall severity tier
-        severity_tier = _determine_severity_tier(summary["red_zones"], len(scores))
+        # Determine overall severity tier using PAGASA methodology
+        red_pct = summary["red_zones"] / max(summary["total_barangays"], 1)
+        severity_tier = determine_severity(
+            payload.wind_speed_kph,
+            payload.precipitation_24h_mm,
+            red_pct,
+        )
         
         update_simulation_status(run_id, "PROCESSING", 50)
 
@@ -84,21 +98,32 @@ async def run_simulation_pipeline(
         update_simulation_status(run_id, "PROCESSING", 80)
 
         # 6. Generate Gemini explainability card
+        wind_cat = classify_wind(payload.wind_speed_kph)
+        rain_cat = classify_rainfall(payload.precipitation_24h_mm / 24.0)
+        phase_cat = classify_prep_window(payload.preparation_window_hours)
+
         simulation_context: dict[str, Any] = {
             "wind_speed_kph": payload.wind_speed_kph,
+            "wind_classification": WIND_LABELS.get(wind_cat, wind_cat),
             "precipitation_24h_mm": payload.precipitation_24h_mm,
+            "rainfall_advisory_tier": RAINFALL_TIERS.get(rain_cat, {}).get("label", rain_cat),
             "preparation_window_hours": payload.preparation_window_hours,
+            "planning_phase": PHASE_LABELS.get(phase_cat, phase_cat),
             "severity_tier": severity_tier,
             "storm_radius_km": payload.storm_radius_km,
         }
 
-        # Pass top RED barangays to Gemini for context
-        red_barangays = [s["barangay_name"] for s in scores if s["risk_tier"] == "RED"]
+        # Pass RED and YELLOW barangays to Gemini for comprehensive context
+        impacted = [
+            s["barangay_name"] 
+            for s in scores 
+            if s["risk_tier"] in ("RED", "YELLOW")
+        ]
         
         card_data = await generate_explainability_card(
             simulation_context=simulation_context,
             task_list=raw_tasks,
-            impacted_barangays=red_barangays,
+            impacted_barangays=impacted,
         )
 
         update_simulation_status(run_id, "PROCESSING", 90)
@@ -170,16 +195,3 @@ async def _apply_flood_modifiers(run_id: str) -> None:
         raise
 
 
-def _determine_severity_tier(red_zones: int, total_zones: int) -> str:
-    """Determine overall severity based on RED zone percentage."""
-    if total_zones == 0:
-        return "LOW"
-    
-    red_pct = red_zones / total_zones
-    if red_pct > 0.3:
-        return "CRITICAL"
-    elif red_pct > 0.1:
-        return "HIGH"
-    elif red_pct > 0.02:
-        return "MODERATE"
-    return "LOW"

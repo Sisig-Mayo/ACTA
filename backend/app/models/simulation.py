@@ -73,9 +73,9 @@ class SimulationInput(BaseModel):
     preparation_window_hours: int = Field(
         ...,
         ge=0,
-        le=168,
+        le=4320,
         description="Hours until projected impact (T).",
-        examples=[36],
+        examples=[36, 720],
     )
     storm_track_points: list[list[float]] = Field(
         ...,

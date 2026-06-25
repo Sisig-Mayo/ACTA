@@ -142,20 +142,28 @@ Manila, Philippines. Generate a plain-language Explainability Card for
 local government unit (LGU) operators based on the following simulation data.
 
 SIMULATION PARAMETERS:
-- Wind Speed: {context.get('wind_speed_kph', 'N/A')} kph
-- 24-hour Precipitation: {context.get('precipitation_24h_mm', 'N/A')} mm
+- Wind Speed: {context.get('wind_speed_kph', 'N/A')} kph (PAGASA: {context.get('wind_classification', 'N/A')})
+- 24-hour Precipitation: {context.get('precipitation_24h_mm', 'N/A')} mm (PAGASA: {context.get('rainfall_advisory_tier', 'N/A')} Advisory)
 - Preparation Window: {context.get('preparation_window_hours', 'N/A')} hours before impact
+- Planning Phase: {context.get('planning_phase', 'N/A')}
 - Severity Tier: {context.get('severity_tier', 'N/A')}
 
-IMPACTED BARANGAYS: {barangay_list}
+IMPACTED BARANGAYS (RED/YELLOW ZONES): {barangay_list}
 
 RECOMMENDED ACTIONS:
 {task_summary}
 
+TIME CONTEXT (CRITICAL):
+You must adjust your tone and focus based on the Planning Phase:
+- If "Immediate Tactical Response" (< 48h): Focus on immediate life-safety, urgent directives, and forced evacuations.
+- If "Logistical Deployment" (48h–1wk): Focus on logistical mobilization, resource staging, and voluntary evacuations.
+- If "Pre-positioning & Readiness" (1wk–1mo): Focus on preparedness drills, pre-positioning assets, and community awareness.
+- If "Structural Preparedness" (1–6mo): Focus on long-term structural improvements, inter-agency coordination, and capacity building.
+
 Respond with a JSON object containing exactly these keys:
-1. "summary" — A one-paragraph executive summary (3-4 sentences max).
+1. "summary" — A one-paragraph executive summary (3-4 sentences max) incorporating the PAGASA classifications.
 2. "risk_narrative" — Plain-language explanation of the threat scenario.
-3. "action_rationale" — Why these specific actions were prioritized.
+3. "action_rationale" — Why these specific actions were prioritized given the time constraint.
 4. "confidence_note" — Caveats about model limitations and data freshness.
 
 Write for a non-technical audience. Use clear, direct language.

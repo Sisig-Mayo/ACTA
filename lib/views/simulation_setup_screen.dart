@@ -70,8 +70,14 @@ class _SimulationSetupContentState
     final profile = ref.read(simProfileProvider);
     final rainfall = double.tryParse(_rainfallCtrl.text) ?? 120.0;
     final wind = double.tryParse(_windCtrl.text) ?? 65.0;
-    final prepWindow =
-        int.tryParse(ref.read(_prepWindowProvider).split(' ').first) ?? 24;
+    final prepWindowStr = ref.read(_prepWindowProvider);
+    int prepWindow = 24;
+    if (prepWindowStr == '1 Week') prepWindow = 168;
+    else if (prepWindowStr == '2 Weeks') prepWindow = 336;
+    else if (prepWindowStr == '1 Month') prepWindow = 720;
+    else if (prepWindowStr == '3 Months') prepWindow = 2160;
+    else if (prepWindowStr == '6 Months') prepWindow = 4320;
+    else prepWindow = int.tryParse(prepWindowStr.split(' ').first) ?? 24;
 
     // Save snapshot for display in run screen
     ref.read(simulationInputSnapshotProvider.notifier).state = {
@@ -390,9 +396,9 @@ class _ParametersForm extends ConsumerWidget {
             children: [
               Expanded(
                 child: _paramField(
-                  label: 'Rainfall Volume (mm/hr)',
+                  label: '24h Rainfall (mm)',
                   hint: '120',
-                  helper: 'Typical range 20 - 300mm',
+                  helper: 'GREEN: <180 | YELLOW: <360 | ORANGE: <720 | RED: 720+',
                   controller: rainfallCtrl,
                   suffix: 'mm',
                   isNumeric: true,
@@ -403,7 +409,7 @@ class _ParametersForm extends ConsumerWidget {
                 child: _paramField(
                   label: 'Wind Speed (km/h)',
                   hint: '65',
-                  helper: 'Typical range 10 - 150 km/h',
+                  helper: 'TD: ≤61 | TS: 62-88 | TY: 118-184 | STY: ≥185',
                   controller: windCtrl,
                   suffix: 'km/h',
                   isNumeric: true,
@@ -428,7 +434,11 @@ class _ParametersForm extends ConsumerWidget {
                     '12 Hours',
                     '24 Hours',
                     '48 Hours',
-                    '72 Hours',
+                    '1 Week',
+                    '2 Weeks',
+                    '1 Month',
+                    '3 Months',
+                    '6 Months',
                   ],
                   onChanged: (v) =>
                       ref.read(_prepWindowProvider.notifier).state = v!,
