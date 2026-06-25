@@ -63,7 +63,6 @@ async def calculate_safe_route(
     start_lat: float,
     end_lng: float,
     end_lat: float,
-    flood_zone_wkt: str,
 ) -> list[dict[str, Any]]:
     """
     Compute a flood-aware safe route between two geographic points.
@@ -76,11 +75,6 @@ async def calculate_safe_route(
     ----------
     start_lng, start_lat : float
         Origin coordinates (WGS 84).
-    end_lng, end_lat : float
-        Destination coordinates (WGS 84).
-    flood_zone_wkt : str
-        Well-Known Text (WKT) representation of the flood zone geometry.
-
     Returns
     -------
     list[dict]
@@ -101,8 +95,7 @@ async def calculate_safe_route(
             $1::DOUBLE PRECISION,
             $2::DOUBLE PRECISION,
             $3::DOUBLE PRECISION,
-            $4::DOUBLE PRECISION,
-            ST_GeomFromText($5, 4326)
+            $4::DOUBLE PRECISION
         )
         ORDER BY path_seq;
     """
@@ -110,7 +103,7 @@ async def calculate_safe_route(
     try:
         async with pool.acquire() as conn:
             rows = await conn.fetch(
-                query, start_lng, start_lat, end_lng, end_lat, flood_zone_wkt
+                query, start_lng, start_lat, end_lng, end_lat
             )
 
         route = [
