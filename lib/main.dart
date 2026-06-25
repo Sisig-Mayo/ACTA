@@ -11,7 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'views/dashboard_screen.dart';
+import 'views/login_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,7 +29,7 @@ class ActaApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.dark,
       darkTheme: _buildDarkTheme(),
-      home: const DashboardScreen(),
+      home: const LoginScreen(),
     );
   }
 
@@ -39,7 +39,6 @@ class ActaApp extends StatelessWidget {
     const surfaceColor = Color(0xFF1A1D23);     // Deep charcoal
     const cardColor = Color(0xFF22262E);        // Elevated surface
     const errorColor = Color(0xFFFF5252);       // Alert red
-    const warningColor = Color(0xFFFFB74D);     // Warning amber
 
     return ThemeData(
       useMaterial3: true,

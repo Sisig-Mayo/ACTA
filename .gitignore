@@ -130,3 +130,5 @@ dist/
 # Node / JavaScript (if any tooling)
 # ============================================================
 node_modules/
+
+.cursorrules
