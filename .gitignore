@@ -88,3 +88,45 @@ crashlytics-build.properties
 # Environment files
 .env
 .env.*
+
+# ============================================================
+# ACTA — Geospatial & Large Binary Assets
+# ============================================================
+# CRITICAL: Geographic raw data must NEVER enter Git history.
+# Store locally in data/raw/ and reference via .env paths.
+# ============================================================
+
+# GeoJSON / Shapefiles / Raster
+*.geojson
+*.shp
+*.dbf
+*.prj
+*.shx
+*.tif
+*.tiff
+*.kml
+*.kmz
+*.gpkg
+*.gdb
+
+# Raw and processed data directories
+data/raw/
+data/processed/
+
+# ============================================================
+# Python / Backend
+# ============================================================
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+*.egg
+
+# ============================================================
+# Node / JavaScript (if any tooling)
+# ============================================================
+node_modules/
