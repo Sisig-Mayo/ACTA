@@ -26,7 +26,7 @@ CREATE EXTENSION IF NOT EXISTS pgrouting;
 
 CREATE TABLE IF NOT EXISTS barangays (
     id              SERIAL PRIMARY KEY,
-    barangay_name   VARCHAR(100) NOT NULL,
+    barangay_name   VARCHAR(100) NOT NULL UNIQUE,
     district        VARCHAR(50)  NOT NULL,
     geom            GEOMETRY(MultiPolygon, 4326) NOT NULL,
 

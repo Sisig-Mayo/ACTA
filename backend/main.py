@@ -22,6 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.routes import routing, simulation
+from app.services.bypass_router import close_pool
 
 # -----------------------------------------------------------
 # Logging
@@ -51,6 +52,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("   Gemini API key configured: %s", bool(settings.GEMINI_API_KEY))
     yield
     logger.info("🛑 ACTA Backend shutting down gracefully.")
+    await close_pool()
 
 
 # -----------------------------------------------------------

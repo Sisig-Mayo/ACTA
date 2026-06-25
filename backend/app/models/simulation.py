@@ -83,6 +83,13 @@ class SimulationInput(BaseModel):
         description="Storm track as [[lng, lat], ...] coordinate pairs.",
         examples=[[[120.98, 14.60], [120.95, 14.55], [120.90, 14.50]]],
     )
+    storm_radius_km: float = Field(
+        default=50.0,
+        ge=10.0,
+        le=500.0,
+        description="Impact radius of the storm in kilometers.",
+        examples=[100.0],
+    )
 
     @field_validator("storm_track_points", mode="after")
     @classmethod
@@ -109,6 +116,33 @@ class SimulationInput(BaseModel):
 # -----------------------------------------------------------
 # Response Models
 # -----------------------------------------------------------
+
+class SimulationRunResponse(BaseModel):
+    """Response returned immediately when a simulation is accepted."""
+    run_id: str = Field(description="UUID of the simulation run.")
+    status: str = Field(description="Current status (e.g., 'PROCESSING').")
+    message: str = Field(description="Informational message.")
+
+
+class SimulationStatusResponse(BaseModel):
+    """Response for checking simulation progress."""
+    run_id: str
+    status: str
+    progress_pct: int
+    error_message: str | None = None
+
+
+class RiskScoreResult(BaseModel):
+    """Per-barangay risk score result."""
+    barangay_id: int
+    barangay_name: str
+    district: str
+    water_accumulation_score: float
+    elevation_factor: float
+    historical_frequency: float
+    total_risk_score: float
+    risk_tier: str
+
 
 class BarangayImpact(BaseModel):
     """Impact assessment for a single barangay."""
