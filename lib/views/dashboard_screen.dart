@@ -16,6 +16,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../models/simulation_models.dart';
+import '../models/user_profile.dart';
+import 'login_screen.dart';
 import 'widgets/control_panel.dart';
 import 'widgets/explainability_card.dart';
 
@@ -100,6 +102,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final isLoading = ref.watch(isLoadingProvider);
     final errorMsg = ref.watch(errorMessageProvider);
     final screenWidth = MediaQuery.of(context).size.width;
+    final authUser = ref.watch(authUserProvider);
 
     // Responsive: stack vertically on narrow screens.
     final isWide = screenWidth > 1200;
@@ -134,8 +137,38 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ],
         ),
         actions: [
-          if (output != null)
+          if (output != null) ...[
             _SeverityBadge(severity: output.severityTier),
+            const SizedBox(width: 12),
+          ],
+          if (authUser != null) ...[
+            Tooltip(
+              message: '${authUser.fullName} (${authUser.email})',
+              child: CircleAvatar(
+                radius: 16,
+                backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                child: Text(
+                  authUser.initials,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.logout_outlined, size: 20),
+              tooltip: 'Sign out',
+              onPressed: () {
+                ref.read(authUserProvider.notifier).state = null;
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                );
+              },
+            ),
+          ],
           const SizedBox(width: 16),
         ],
       ),
