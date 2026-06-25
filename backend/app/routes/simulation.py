@@ -34,6 +34,7 @@ from app.models.simulation import (
 from app.services.risk_pipeline import run_simulation_pipeline
 from app.services.pdf_generator import generate_master_action_plan
 from app.services.dispatch import execute_action_plan
+from app.models.llm_models import LLMActionPlanResponse
 
 logger = logging.getLogger("acta.routes.simulation")
 
@@ -220,6 +221,10 @@ async def get_simulation_results(run_id: str) -> SimulationOutput:
                 "generated_at": run_record["created_at"],
                 "total_red_zones": run_record.get("total_red_zones", 0),
                 "total_yellow_zones": run_record.get("total_yellow_zones", 0),
+                "llm_action_plan": run_record.get("llm_action_plan"),
+                "llm_generated_by": (
+                    run_record.get("llm_action_plan", {}) or {}
+                ).get("generated_by"),
             }
         )
 
@@ -283,3 +288,72 @@ async def dispatch_plan(payload: dict[str, Any]) -> dict[str, Any]:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Dispatch error: {str(e)}",
         )
+
+
+# -----------------------------------------------------------
+# GET /api/v1/simulation/llm-context/{run_id}
+# -----------------------------------------------------------
+
+@router.get(
+    "/llm-context/{run_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Get LLM Context Snapshot (Audit/Debug)",
+    description=(
+        "Returns the raw structured context document that was assembled "
+        "from basic parameters and simulation data and sent to the LLM "
+        "for action plan generation. Useful for auditing and debugging "
+        "the LLM pipeline."
+    ),
+)
+async def get_llm_context(run_id: str) -> dict[str, Any]:
+    """Retrieve the LLM context snapshot and action plan for a simulation run."""
+    client = get_supabase_client()
+    if client is None:
+        raise HTTPException(status_code=500, detail="Database unavailable")
+
+    try:
+        res = (
+            client.table("simulation_runs")
+            .select(
+                "id, status, llm_action_plan, llm_context_snapshot, "
+                "severity_tier, preparation_window_hours, "
+                "total_red_zones, total_yellow_zones, total_green_zones"
+            )
+            .eq("id", run_id)
+            .execute()
+        )
+        if not res.data:
+            raise HTTPException(status_code=404, detail="Simulation run not found")
+
+        record = res.data[0]
+
+        if record["status"] != "COMPLETED":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Simulation not complete. Status: {record['status']}",
+            )
+
+        llm_plan = record.get("llm_action_plan")
+        llm_context_text = record.get("llm_context_snapshot")
+
+        return {
+            "run_id": run_id,
+            "llm_pipeline_executed": llm_plan is not None,
+            "generated_by": (llm_plan or {}).get("generated_by", "not_available"),
+            "total_ai_tasks": len((llm_plan or {}).get("action_plan_tasks", [])),
+            "llm_action_plan": llm_plan,
+            "llm_context_snapshot": llm_context_text,
+            "simulation_summary": {
+                "severity_tier": record.get("severity_tier"),
+                "preparation_window_hours": record.get("preparation_window_hours"),
+                "total_red_zones": record.get("total_red_zones", 0),
+                "total_yellow_zones": record.get("total_yellow_zones", 0),
+                "total_green_zones": record.get("total_green_zones", 0),
+            },
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to fetch LLM context: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))

@@ -8,8 +8,9 @@ Coordinates the async execution of the full simulation pipeline.
 3. Batch insert 905 risk scores via Supabase bulk INSERT
 4. Call `apply_flood_cost_modifiers(run_id)` to update road network
 5. Generate time-decay tasks
-6. Generate Gemini explainability card
-7. Update `simulation_runs` status to COMPLETED
+6. Generate Gemini explainability card (legacy)
+7. Execute LLM context pipeline (assembles full context → Gemini → action plan)
+8. Update `simulation_runs` status to COMPLETED
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ from app.models.simulation import SimulationInput
 from app.services.bypass_router import _get_pool
 from app.services.decay_engine import generate_time_decay_tasks
 from app.services.gee_engine import calculate_risk_scores
+from app.services.llm_pipeline import execute_llm_pipeline
 
 logger = logging.getLogger("acta.risk_pipeline")
 
@@ -101,9 +103,37 @@ async def run_simulation_pipeline(
             impacted_barangays=red_barangays,
         )
 
-        update_simulation_status(run_id, "PROCESSING", 90)
+        update_simulation_status(run_id, "PROCESSING", 85)
 
-        # 7. Update simulation_runs status to COMPLETED with all metadata
+        # 7. Execute LLM Context Pipeline
+        #    Assembles full context from basic params + simulation data
+        #    and generates a context-aware action plan via Gemini.
+        llm_plan_data = None
+        llm_context_snapshot = None
+        try:
+            llm_plan, llm_context = await execute_llm_pipeline(
+                run_id=run_id,
+                payload=payload,
+                severity_tier=severity_tier,
+                scores=scores,
+                summary=summary,
+                raw_tasks=raw_tasks,
+            )
+            llm_plan_data = llm_plan.model_dump()
+            llm_context_snapshot = llm_context.to_context_document()
+            logger.info(
+                "LLM pipeline produced %d AI-refined tasks for run %s",
+                len(llm_plan.action_plan_tasks), run_id,
+            )
+        except Exception as llm_err:
+            logger.error(
+                "LLM pipeline failed for run %s (non-fatal, using template tasks): %s",
+                run_id, llm_err,
+            )
+
+        update_simulation_status(run_id, "PROCESSING", 95)
+
+        # 8. Update simulation_runs status to COMPLETED with all metadata
         update_simulation_status(
             run_id=run_id,
             status="COMPLETED",
@@ -115,6 +145,8 @@ async def run_simulation_pipeline(
                 "total_green_zones": summary["green_zones"],
                 "explainability_card": card_data,
                 "task_list": raw_tasks,
+                "llm_action_plan": llm_plan_data,
+                "llm_context_snapshot": llm_context_snapshot,
             }
         )
         logger.info("Simulation pipeline for run %s completed successfully.", run_id)
