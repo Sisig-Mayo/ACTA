@@ -159,7 +159,7 @@ Respond with a JSON object containing exactly these keys:
 4. "confidence_note" — Caveats about model limitations and data freshness.
 
 Write for a non-technical audience. Use clear, direct language.
-Avoid jargon. Be specific about Manila geography where relevant."""
+Avoid jargon. Be specific about Manila geography where relevant. Strictly focus your explanation on the City of Manila and its barangays, do not include or mention other cities or provinces outside Manila."""
 
 
 # -----------------------------------------------------------

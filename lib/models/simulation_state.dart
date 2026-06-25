@@ -46,3 +46,9 @@ final simulationErrorProvider = StateProvider<String?>((ref) => null);
 /// Raw simulation input parameters (for display in Run screen summary).
 final simulationInputSnapshotProvider =
     StateProvider<Map<String, dynamic>>((ref) => {});
+
+/// The run_id returned by the backend for the current simulation.
+final simulationRunIdProvider = StateProvider<String?>((ref) => null);
+
+/// Real-time progress percentage (0–100) from backend polling.
+final simulationProgressProvider = StateProvider<int>((ref) => 0);

@@ -1,7 +1,8 @@
 /// ACTA Frontend — Run Simulation Screen
 /// ========================================
-/// Displays the 4-step simulation progress stepper, a simulated
-/// flood inundation map, simulation summary, and model progress.
+/// Displays the 4-step simulation progress stepper with REAL
+/// backend polling, a dynamic barangay flood map, simulation
+/// summary, and model progress.
 /// Renders as content inside AppShell (no Scaffold).
 ///
 /// Target Branch : feat/dashboard
@@ -9,16 +10,19 @@ library;
 
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../models/simulation_models.dart';
 import '../models/simulation_state.dart';
+import '../models/barangay_provider.dart';
 import 'app_shell.dart';
 
 // -----------------------------------------------------------
-// Progress step index for animated model progress
+// Constants
 // -----------------------------------------------------------
 
 const _kManilaCtr = LatLng(14.5928, 120.9762);
@@ -31,19 +35,14 @@ const _modelSteps = [
   'Output Generation',
 ];
 
-// Inundation depth circles (simulated flood depth overlay)
-final _inundationCircles = [
-  // > 2.0 m — deep red
-  CircleMarker(point: const LatLng(14.6155, 120.9674), radius: 1400, color: const Color(0x88DC2626), borderColor: Colors.transparent, borderStrokeWidth: 0, useRadiusInMeter: true),
-  // 1.0–2.0 m — red-orange
-  CircleMarker(point: const LatLng(14.6050, 120.9810), radius: 1600, color: const Color(0x88F97316), borderColor: Colors.transparent, borderStrokeWidth: 0, useRadiusInMeter: true),
-  // 0.5–1.0 m — amber
-  CircleMarker(point: const LatLng(14.5980, 121.0000), radius: 1800, color: const Color(0x88F59E0B), borderColor: Colors.transparent, borderStrokeWidth: 0, useRadiusInMeter: true),
-  // 0.2–0.5 m — yellow
-  CircleMarker(point: const LatLng(14.5853, 121.0050), radius: 1500, color: const Color(0x88EAB308), borderColor: Colors.transparent, borderStrokeWidth: 0, useRadiusInMeter: true),
-  // < 0.2 m — light blue
-  CircleMarker(point: const LatLng(14.5660, 120.9863), radius: 2000, color: const Color(0x880EA5E9), borderColor: Colors.transparent, borderStrokeWidth: 0, useRadiusInMeter: true),
-];
+/// Maps progress_pct (0–100) to step index (0–4).
+int _progressToStep(int pct) {
+  if (pct < 20) return 0;
+  if (pct < 50) return 1;
+  if (pct < 70) return 2;
+  if (pct < 90) return 3;
+  return 4;
+}
 
 // -----------------------------------------------------------
 // Run Simulation Content
@@ -59,35 +58,77 @@ class RunSimulationContent extends ConsumerStatefulWidget {
 
 class _RunSimulationContentState
     extends ConsumerState<RunSimulationContent> {
-  Timer? _stepTimer;
-  int _stepIndex = 0;
+  Timer? _pollTimer;
+  final Dio _dio = Dio(BaseOptions(
+    baseUrl: 'http://localhost:8000',
+    connectTimeout: const Duration(seconds: 10),
+    receiveTimeout: const Duration(seconds: 30),
+  ));
 
   @override
   void initState() {
     super.initState();
-    _startProgress();
+    _startPolling();
   }
 
-  void _startProgress() {
-    _stepTimer = Timer.periodic(const Duration(seconds: 2), (t) {
-      if (!mounted) {
-        t.cancel();
-        return;
-      }
-      setState(() {
-        if (_stepIndex < _modelSteps.length - 1) {
-          _stepIndex++;
-        } else {
-          t.cancel();
-          // If the API has already returned, navigate to results
-          final state = ref.read(simulationRunStateProvider);
-          if (state == SimulationRunState.completed ||
-              state == SimulationRunState.error) {
-            _goToResults();
-          }
-        }
-      });
+  void _startPolling() {
+    // Poll every 2 seconds
+    _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      _pollStatus();
     });
+    // Also poll immediately
+    _pollStatus();
+  }
+
+  Future<void> _pollStatus() async {
+    final runId = ref.read(simulationRunIdProvider);
+    if (runId == null) return;
+
+    try {
+      final response = await _dio.get('/api/v1/simulation/status/$runId');
+      if (!mounted) return;
+
+      final data = response.data as Map<String, dynamic>;
+      final status = data['status'] as String;
+      final progressPct = (data['progress_pct'] as num?)?.toInt() ?? 0;
+
+      ref.read(simulationProgressProvider.notifier).state = progressPct;
+
+      if (status == 'COMPLETED') {
+        _pollTimer?.cancel();
+        // Fetch full results
+        await _fetchResults(runId);
+      } else if (status == 'FAILED') {
+        _pollTimer?.cancel();
+        ref.read(simulationErrorProvider.notifier).state =
+            data['error_message']?.toString() ?? 'Simulation failed';
+        ref.read(simulationRunStateProvider.notifier).state =
+            SimulationRunState.error;
+      }
+    } catch (e) {
+      print('Polling error: $e');
+      // Silently retry on next poll cycle
+    }
+  }
+
+  Future<void> _fetchResults(String runId) async {
+    try {
+      final response = await _dio.get('/api/v1/simulation/results/$runId');
+      if (!mounted) return;
+
+      if (response.statusCode == 200 && response.data != null) {
+        ref.read(simulationResultProvider.notifier).state =
+            SimulationOutput.fromJson(
+                response.data as Map<String, dynamic>);
+      }
+      ref.read(simulationRunStateProvider.notifier).state =
+          SimulationRunState.completed;
+    } catch (e) {
+      ref.read(simulationErrorProvider.notifier).state =
+          'Failed to fetch results: $e';
+      ref.read(simulationRunStateProvider.notifier).state =
+          SimulationRunState.error;
+    }
   }
 
   void _goToResults() {
@@ -96,7 +137,7 @@ class _RunSimulationContentState
   }
 
   void _cancelSimulation() {
-    _stepTimer?.cancel();
+    _pollTimer?.cancel();
     ref.read(simulationRunStateProvider.notifier).state =
         SimulationRunState.idle;
     ref.read(runSimulationActiveProvider.notifier).state = false;
@@ -105,7 +146,7 @@ class _RunSimulationContentState
 
   @override
   void dispose() {
-    _stepTimer?.cancel();
+    _pollTimer?.cancel();
     super.dispose();
   }
 
@@ -113,10 +154,13 @@ class _RunSimulationContentState
   Widget build(BuildContext context) {
     final runState = ref.watch(simulationRunStateProvider);
     final snapshot = ref.watch(simulationInputSnapshotProvider);
+    final progressPct = ref.watch(simulationProgressProvider);
+    final stepIndex = _progressToStep(progressPct);
+    final barangaysAsync = ref.watch(barangayPolygonsProvider);
+    final simResult = ref.watch(simulationResultProvider);
 
-    // Auto-navigate once complete and steps done
-    if (runState == SimulationRunState.completed &&
-        _stepIndex >= _modelSteps.length - 1) {
+    // Auto-navigate once complete
+    if (runState == SimulationRunState.completed) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _goToResults());
     }
 
@@ -142,7 +186,11 @@ class _RunSimulationContentState
                     // Map
                     Expanded(
                       flex: 3,
-                      child: _MapCard(stepIndex: _stepIndex),
+                      child: _MapCard(
+                        progressPct: progressPct,
+                        barangaysAsync: barangaysAsync,
+                        simResult: simResult,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     // Right panels
@@ -152,7 +200,10 @@ class _RunSimulationContentState
                         children: [
                           _SimSummaryCard(snapshot: snapshot),
                           const SizedBox(height: 12),
-                          _ModelProgressCard(stepIndex: _stepIndex),
+                          _ModelProgressCard(
+                            stepIndex: stepIndex,
+                            progressPct: progressPct,
+                          ),
                         ],
                       ),
                     ),
@@ -160,6 +211,33 @@ class _RunSimulationContentState
                 ),
 
                 const SizedBox(height: 16),
+
+                // Error banner
+                if (runState == SimulationRunState.error)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEE2E2),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFDC2626)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline,
+                            color: Color(0xFFDC2626)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            ref.watch(simulationErrorProvider) ??
+                                'An error occurred',
+                            style: const TextStyle(
+                                color: Color(0xFFDC2626), fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
 
                 // What happens next banner
                 _WhatNextBanner(onCancel: _cancelSimulation),
@@ -298,11 +376,25 @@ class _StepperBar extends StatelessWidget {
 // -----------------------------------------------------------
 
 class _MapCard extends StatelessWidget {
-  final int stepIndex;
-  const _MapCard({required this.stepIndex});
+  final int progressPct;
+  final AsyncValue<List<BarangayPolygon>> barangaysAsync;
+  final SimulationOutput? simResult;
+
+  const _MapCard({
+    required this.progressPct,
+    required this.barangaysAsync,
+    this.simResult,
+  });
 
   @override
   Widget build(BuildContext context) {
+    Map<String, String>? riskMap;
+    if (simResult != null) {
+      riskMap = {};
+      for (final b in simResult!.impactedBarangays) {
+        riskMap[b.barangayName] = b.zoneStatus.name;
+      }
+    }
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -312,105 +404,97 @@ class _MapCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 14, 16, 10),
-            child: Text('Simulated Flood Inundation Map (24 Hours)',
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF111827))),
-          ),
-          SizedBox(
-            height: 380,
-            child: Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(10),
-                    bottomRight: Radius.circular(10),
-                  ),
-                  child: FlutterMap(
-                    options: const MapOptions(
-                      initialCenter: _kManilaCtr,
-                      initialZoom: 12,
-                    ),
-                    children: [
-                      TileLayer(
-                        urlTemplate:
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.acta.app',
-                      ),
-                      CircleLayer(circles: _inundationCircles),
-                    ],
-                  ),
-                ),
-                // Depth Legend
-                Positioned(
-                  top: 10,
-                  left: 10,
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.92),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFE5E7EB)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('Flood Depth (m)',
-                            style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF374151))),
-                        const SizedBox(height: 6),
-                        _depthItem(const Color(0xFFDC2626), '> 2.0 m'),
-                        _depthItem(const Color(0xFFF97316), '1.0 – 2.0 m'),
-                        _depthItem(const Color(0xFFF59E0B), '0.5 – 1.0 m'),
-                        _depthItem(const Color(0xFFEAB308), '0.2 – 0.5 m'),
-                        _depthItem(const Color(0xFF0EA5E9), '< 0.2 m'),
-                        _depthItem(const Color(0xFFE5E7EB), 'No Data'),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
             child: Row(
               children: [
-                Icon(Icons.info_outline, size: 13, color: Color(0xFF9CA3AF)),
-                SizedBox(width: 6),
-                Text(
-                  'This map shows simulated flood depth based on the parameters provided.',
-                  style:
-                      TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                const Text('Simulated Flood Inundation Map',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF111827))),
+                const Spacer(),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0EA5E9).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '$progressPct%',
+                    style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0EA5E9)),
+                  ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _depthItem(Color color, String label) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 3),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 10, height: 10,
-            decoration:
-                BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
+          // Progress bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progressPct / 100.0,
+                minHeight: 4,
+                backgroundColor: const Color(0xFFE5E7EB),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  progressPct >= 100
+                      ? const Color(0xFF16A34A)
+                      : const Color(0xFF0EA5E9),
+                ),
+              ),
+            ),
           ),
-          const SizedBox(width: 6),
-          Text(label,
-              style: const TextStyle(fontSize: 10, color: Color(0xFF374151))),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 380,
+            child: ClipRRect(
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(10),
+                bottomRight: Radius.circular(10),
+              ),
+              child: FlutterMap(
+                options: const MapOptions(
+                  initialCenter: _kManilaCtr,
+                  initialZoom: 12,
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.acta.app',
+                  ),
+                  barangaysAsync.when(
+                    data: (barangays) => PolygonLayer(
+                      polygons: buildBarangayMapPolygons(barangays, riskMap: riskMap),
+                    ),
+                    loading: () => const PolygonLayer(polygons: <Polygon>[]),
+                    error: (_, __) => const PolygonLayer(polygons: <Polygon>[]),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, size: 13, color: Color(0xFF9CA3AF)),
+                const SizedBox(width: 6),
+                Text(
+                  simResult == null
+                      ? 'Barangay polygons will be colored once simulation completes.'
+                      : 'Map updated with simulation risk layers.',
+                  style:
+                      const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -452,8 +536,8 @@ class _SimSummaryCard extends StatelessWidget {
               '${get('rainfall_mm', '120')} mm'),
           _row(Icons.air, 'Wind Speed',
               '${get('wind_kph', '65')} km/h'),
-          _row(Icons.location_city_outlined, 'Affected District(s)',
-              get('affected_districts', 'All Districts (NCR)')),
+          _row(Icons.location_city_outlined, 'Coverage',
+              'All 897 Barangays'),
           _row(Icons.water_outlined, 'Pumping Stations',
               get('pumping_status', '3 Offline')),
           _row(Icons.directions_boat_outlined, 'Rescue Assets',
@@ -513,7 +597,11 @@ class _SimSummaryCard extends StatelessWidget {
 
 class _ModelProgressCard extends StatelessWidget {
   final int stepIndex;
-  const _ModelProgressCard({required this.stepIndex});
+  final int progressPct;
+  const _ModelProgressCard({
+    required this.stepIndex,
+    required this.progressPct,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -527,11 +615,23 @@ class _ModelProgressCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Model Progress',
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF111827))),
+          Row(
+            children: [
+              const Text('Model Progress',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF111827))),
+              const Spacer(),
+              Text(
+                '$progressPct%',
+                style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0EA5E9)),
+              ),
+            ],
+          ),
           const SizedBox(height: 10),
           ..._modelSteps.asMap().entries.map((e) {
             final i = e.key;

@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../models/user_profile.dart';
+import '../models/simulation_state.dart';
 import 'command_center_screen.dart';
 import 'simulation_setup_screen.dart';
 import 'run_simulation_screen.dart';
@@ -139,9 +140,14 @@ class _ShellScaffold extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedIndex = ref.watch(shellIndexProvider);
     final isRunSim = ref.watch(runSimulationActiveProvider);
+    final simState = ref.watch(simulationRunStateProvider);
 
     final Widget pageContent;
-    if (selectedIndex == 1 && isRunSim) {
+    // Show RunSimulationContent if:
+    // 1. We're on the Simulation tab AND runSimulationActive is true, OR
+    // 2. We're on the Simulation tab AND the simulation is still running
+    if (selectedIndex == 1 &&
+        (isRunSim || simState == SimulationRunState.running)) {
       pageContent = const RunSimulationContent();
     } else {
       pageContent = switch (selectedIndex) {
@@ -214,8 +220,12 @@ class _Sidebar extends ConsumerWidget {
                   isSelected: selectedIndex == i,
                   onTap: () {
                     ref.read(shellIndexProvider.notifier).state = i;
-                    ref.read(runSimulationActiveProvider.notifier).state =
-                        false;
+                    // Only reset run sim flag if the simulation is NOT running
+                    final simState = ref.read(simulationRunStateProvider);
+                    if (simState != SimulationRunState.running) {
+                      ref.read(runSimulationActiveProvider.notifier).state =
+                          false;
+                    }
                   },
                 );
               },

@@ -27,8 +27,6 @@ final _pumpingStatusProvider =
     StateProvider<String>((ref) => '3 Offline');
 final _rescueAssetsProvider =
     StateProvider<String>((ref) => '12 Boats Available');
-final _affectedDistrictProvider =
-    StateProvider<String>((ref) => 'All Districts (NCR)');
 final _notesProvider = StateProvider<String>((ref) => '');
 
 // -----------------------------------------------------------
@@ -81,15 +79,9 @@ class _SimulationSetupContentState
       'rainfall_mm': rainfall,
       'wind_kph': wind,
       'prep_hours': prepWindow,
-      'affected_districts': ref.read(_affectedDistrictProvider),
       'pumping_status': ref.read(_pumpingStatusProvider),
       'rescue_assets': ref.read(_rescueAssetsProvider),
     };
-
-    ref.read(simulationRunStateProvider.notifier).state =
-        SimulationRunState.running;
-    ref.read(runSimulationActiveProvider.notifier).state = true;
-    ref.read(shellIndexProvider.notifier).state = 1;
 
     try {
       final dio = Dio(BaseOptions(
@@ -112,20 +104,33 @@ class _SimulationSetupContentState
         },
       );
 
-      if (response.statusCode == 200 && response.data != null) {
-        ref.read(simulationResultProvider.notifier).state =
-            SimulationOutput.fromJson(
-                response.data as Map<String, dynamic>);
+      // Backend returns 202 with { run_id, status, message }
+      if ((response.statusCode == 200 || response.statusCode == 202) &&
+          response.data != null) {
+        final runId = response.data['run_id'] as String;
+        if (!mounted) return;
+        
+        // Safely set all states now that we have runId
+        ref.read(simulationRunIdProvider.notifier).state = runId;
+        ref.read(simulationProgressProvider.notifier).state = 0;
+        ref.read(simulationRunStateProvider.notifier).state =
+            SimulationRunState.running;
+        
+        // Switch tabs
+        ref.read(runSimulationActiveProvider.notifier).state = true;
+        ref.read(shellIndexProvider.notifier).state = 1;
+      } else {
+        throw Exception('Unexpected response: ${response.statusCode}');
       }
-      ref.read(simulationRunStateProvider.notifier).state =
-          SimulationRunState.completed;
     } on DioException catch (e) {
+      if (!mounted) return;
       ref.read(simulationErrorProvider.notifier).state =
           e.response?.data?['detail']?.toString() ??
               'Connection error: ${e.message}';
       ref.read(simulationRunStateProvider.notifier).state =
           SimulationRunState.error;
     } catch (e) {
+      if (!mounted) return;
       ref.read(simulationErrorProvider.notifier).state = e.toString();
       ref.read(simulationRunStateProvider.notifier).state =
           SimulationRunState.error;
@@ -144,8 +149,6 @@ class _SimulationSetupContentState
     ref.read(_pumpingStatusProvider.notifier).state = '3 Offline';
     ref.read(_rescueAssetsProvider.notifier).state =
         '12 Boats Available';
-    ref.read(_affectedDistrictProvider.notifier).state =
-        'All Districts (NCR)';
   }
 
   @override
@@ -369,7 +372,6 @@ class _ParametersForm extends ConsumerWidget {
     final prepWindow = ref.watch(_prepWindowProvider);
     final pumpingStatus = ref.watch(_pumpingStatusProvider);
     final rescueAssets = ref.watch(_rescueAssetsProvider);
-    final affectedDistricts = ref.watch(_affectedDistrictProvider);
     var notesLength = ref.watch(_notesProvider).length;
 
     return Container(
@@ -382,7 +384,7 @@ class _ParametersForm extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row 1: Rainfall | Wind | Districts
+          // Row 1: Rainfall | Wind
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -405,28 +407,6 @@ class _ParametersForm extends ConsumerWidget {
                   controller: windCtrl,
                   suffix: 'km/h',
                   isNumeric: true,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _paramDropdown(
-                  label: 'Affected District(s)',
-                  helper: 'Select one or more districts',
-                  value: affectedDistricts,
-                  items: const [
-                    'All Districts (NCR)',
-                    'Tondo',
-                    'Sampaloc',
-                    'Pandacan',
-                    'Paco',
-                    'Malate',
-                    'Ermita',
-                    'Binondo',
-                    'Santa Cruz',
-                  ],
-                  onChanged: (v) => ref
-                      .read(_affectedDistrictProvider.notifier)
-                      .state = v!,
                 ),
               ),
             ],

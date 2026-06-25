@@ -13,6 +13,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'app_shell.dart';
+import '../models/barangay_provider.dart';
+import '../models/simulation_state.dart';
+import '../models/simulation_models.dart';
 
 // -----------------------------------------------------------
 // Static Baseline Data
@@ -36,21 +39,7 @@ class _RiskArea {
   const _RiskArea(this.name, this.riskLabel, this.riskColor, this.keyFactors);
 }
 
-// Approximate district circles for risk overlay
-final _riskCircles = [
-  // High Risk – red
-  CircleMarker(point: const LatLng(14.6155, 120.9674), radius: 2200, color: const Color(0x55DC2626), borderColor: Colors.transparent, borderStrokeWidth: 0, useRadiusInMeter: true),
-  CircleMarker(point: const LatLng(14.6050, 120.9810), radius: 1800, color: const Color(0x55DC2626), borderColor: Colors.transparent, borderStrokeWidth: 0, useRadiusInMeter: true),
-  // Moderate Risk – amber
-  CircleMarker(point: const LatLng(14.6040, 121.0080), radius: 2000, color: const Color(0x55F59E0B), borderColor: Colors.transparent, borderStrokeWidth: 0, useRadiusInMeter: true),
-  CircleMarker(point: const LatLng(14.5853, 121.0050), radius: 1600, color: const Color(0x55F59E0B), borderColor: Colors.transparent, borderStrokeWidth: 0, useRadiusInMeter: true),
-  CircleMarker(point: const LatLng(14.5790, 120.9985), radius: 1500, color: const Color(0x55F59E0B), borderColor: Colors.transparent, borderStrokeWidth: 0, useRadiusInMeter: true),
-  CircleMarker(point: const LatLng(14.5999, 120.9753), radius: 1200, color: const Color(0x55F59E0B), borderColor: Colors.transparent, borderStrokeWidth: 0, useRadiusInMeter: true),
-  // Low Risk – green
-  CircleMarker(point: const LatLng(14.5660, 120.9863), radius: 1800, color: const Color(0x5516A34A), borderColor: Colors.transparent, borderStrokeWidth: 0, useRadiusInMeter: true),
-  CircleMarker(point: const LatLng(14.5711, 121.0044), radius: 1500, color: const Color(0x5516A34A), borderColor: Colors.transparent, borderStrokeWidth: 0, useRadiusInMeter: true),
-  CircleMarker(point: const LatLng(14.5800, 120.9720), radius: 1400, color: const Color(0x5516A34A), borderColor: Colors.transparent, borderStrokeWidth: 0, useRadiusInMeter: true),
-];
+
 
 // Evacuation center markers (house icon approximation)
 final _evacMarkers = [
@@ -170,9 +159,21 @@ class _CommandCenterContentState
 // Overview Tab
 // -----------------------------------------------------------
 
-class _OverviewTab extends StatelessWidget {
+class _OverviewTab extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final barangaysAsync = ref.watch(barangayPolygonsProvider);
+    final simResult = ref.watch(simulationResultProvider);
+
+    // Build risk map from simulation results if available
+    Map<String, String>? riskMap;
+    if (simResult != null) {
+      riskMap = {};
+      for (final b in simResult.impactedBarangays) {
+        riskMap[b.barangayName] = b.zoneStatus.name;
+      }
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -189,7 +190,7 @@ class _OverviewTab extends StatelessWidget {
                       Icon(Icons.location_on, size: 18, color: Color(0xFF374151)),
                       SizedBox(width: 8),
                       Text(
-                        'Manila Baseline Flood Risk Map',
+                        'Manila Barangay Flood Risk Map',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
@@ -201,7 +202,7 @@ class _OverviewTab extends StatelessWidget {
                 ),
                 SizedBox(
                   height: 320,
-                  child: _buildBaselineMap(),
+                  child: _buildBarangayMap(barangaysAsync, riskMap),
                 ),
                 const SizedBox(height: 12),
               ],
@@ -224,7 +225,10 @@ class _OverviewTab extends StatelessWidget {
     );
   }
 
-  Widget _buildBaselineMap() {
+  Widget _buildBarangayMap(
+    AsyncValue<List<BarangayPolygon>> barangaysAsync,
+    Map<String, String>? riskMap,
+  ) {
     return ClipRRect(
       borderRadius: const BorderRadius.only(
         bottomLeft: Radius.circular(10),
@@ -246,7 +250,14 @@ class _OverviewTab extends StatelessWidget {
                     'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.acta.app',
               ),
-              CircleLayer(circles: _riskCircles),
+              // Barangay polygons
+              barangaysAsync.when(
+                data: (barangays) => PolygonLayer(
+                  polygons: buildBarangayMapPolygons(barangays, riskMap: riskMap),
+                ),
+                loading: () => const PolygonLayer(polygons: <Polygon>[]),
+                error: (_, __) => const PolygonLayer(polygons: <Polygon>[]),
+              ),
               MarkerLayer(
                 markers: [
                   ..._evacMarkers.map((ll) => Marker(
@@ -290,11 +301,13 @@ class _OverviewTab extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _legendItem(const Color(0xFFEF4444), 'High Risk'),
+                  _legendItem(const Color(0xFFEF4444), 'High Risk (Red)'),
                   const SizedBox(height: 4),
-                  _legendItem(const Color(0xFFF59E0B), 'Moderate Risk'),
+                  _legendItem(const Color(0xFFF59E0B), 'Moderate Risk (Yellow)'),
                   const SizedBox(height: 4),
-                  _legendItem(const Color(0xFF16A34A), 'Low Risk'),
+                  _legendItem(const Color(0xFF16A34A), 'Low Risk (Green)'),
+                  const SizedBox(height: 4),
+                  _legendItem(const Color(0xFF0EA5E9), 'Baseline'),
                 ],
               ),
             ),
@@ -514,9 +527,20 @@ class _PriorityRiskAreasCard extends StatelessWidget {
 // Risk Map Tab
 // -----------------------------------------------------------
 
-class _RiskMapTab extends StatelessWidget {
+class _RiskMapTab extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final barangaysAsync = ref.watch(barangayPolygonsProvider);
+    final simResult = ref.watch(simulationResultProvider);
+
+    Map<String, String>? riskMap;
+    if (simResult != null) {
+      riskMap = {};
+      for (final b in simResult.impactedBarangays) {
+        riskMap[b.barangayName] = b.zoneStatus.name;
+      }
+    }
+
     return Padding(
       padding: const EdgeInsets.all(20),
       child: _card(
@@ -532,7 +556,13 @@ class _RiskMapTab extends StatelessWidget {
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.acta.app',
               ),
-              CircleLayer(circles: _riskCircles),
+              barangaysAsync.when(
+                data: (barangays) => PolygonLayer(
+                  polygons: buildBarangayMapPolygons(barangays, riskMap: riskMap),
+                ),
+                loading: () => const PolygonLayer(polygons: <Polygon>[]),
+                error: (_, __) => const PolygonLayer(polygons: <Polygon>[]),
+              ),
             ],
           ),
         ),
