@@ -87,7 +87,7 @@ crashlytics-build.properties
 
 # Environment files
 .env
-.env.*
+.env.local
 
 # ============================================================
 # ACTA — Geospatial & Large Binary Assets

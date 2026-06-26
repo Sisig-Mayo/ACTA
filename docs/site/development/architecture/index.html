@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="Acta contributors" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>System Architecture - Acta Documentation</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../styles/acta.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "System Architecture";
+        var mkdocs_page_input_path = "development/architecture.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/dart.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Acta Documentation
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">About Acta</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Getting Started</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../getting-started/installation/">Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../getting-started/running-acta/">Running Acta</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Development</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">System Architecture</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#runtime-layers">Runtime Layers</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#entry-point">Entry Point</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#root-widget">Root Widget</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#platform-projects">Platform Projects</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#missing-application-systems">Missing Application Systems</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../workflow/">Development Workflow</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/project-structure/">Project Structure</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/configuration/">Configuration</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Acta Documentation</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Development</li>
+      <li class="breadcrumb-item active">System Architecture</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="system-architecture">System Architecture<a class="headerlink" href="#system-architecture" title="Permanent link">&para;</a></h1>
+<p>Acta currently uses Flutter's default single-entry application shape. There is
+one Dart source file and no custom feature modules yet.</p>
+<h2 id="runtime-layers">Runtime Layers<a class="headerlink" href="#runtime-layers" title="Permanent link">&para;</a></h2>
+<p>The current runtime can be read as three layers:</p>
+<ol>
+<li><strong>Platform runner</strong> starts the Flutter engine for the selected platform.</li>
+<li><strong>Flutter framework</strong> loads the Dart application and widget tree.</li>
+<li><strong>Acta root widget</strong> renders the current UI.</li>
+</ol>
+<h2 id="entry-point">Entry Point<a class="headerlink" href="#entry-point" title="Permanent link">&para;</a></h2>
+<p><code>lib/main.dart</code> contains the full application:</p>
+<pre><code class="language-dart">import 'package:flutter/material.dart';
+
+void main() {
+  runApp(const MainApp());
+}
+</code></pre>
+<p><code>main()</code> delegates to Flutter through <code>runApp()</code>. The root widget is <code>MainApp</code>.</p>
+<h2 id="root-widget">Root Widget<a class="headerlink" href="#root-widget" title="Permanent link">&para;</a></h2>
+<p><code>MainApp</code> extends <code>StatelessWidget</code>:</p>
+<pre><code class="language-dart">class MainApp extends StatelessWidget {
+  const MainApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: Text('Hello World!'),
+        ),
+      ),
+    );
+  }
+}
+</code></pre>
+<p>The widget tree is:</p>
+<ul>
+<li><code>MaterialApp</code></li>
+<li><code>Scaffold</code></li>
+<li><code>Center</code></li>
+<li><code>Text</code></li>
+</ul>
+<p>Because every widget in the tree is constant, the current UI has no mutable
+state and no runtime configuration.</p>
+<h2 id="platform-projects">Platform Projects<a class="headerlink" href="#platform-projects" title="Permanent link">&para;</a></h2>
+<p>The platform folders are generated Flutter runner projects:</p>
+<ul>
+<li><code>android/</code></li>
+<li><code>ios/</code></li>
+<li><code>linux/</code></li>
+<li><code>macos/</code></li>
+<li><code>web/</code></li>
+<li><code>windows/</code></li>
+</ul>
+<p>These folders contain the native shell code and build metadata required by
+Flutter. Application behavior should normally be added under <code>lib/</code> unless a
+platform-specific integration is required.</p>
+<h2 id="missing-application-systems">Missing Application Systems<a class="headerlink" href="#missing-application-systems" title="Permanent link">&para;</a></h2>
+<p>The following systems do not exist yet:</p>
+<ul>
+<li>Navigation and routing.</li>
+<li>Feature modules.</li>
+<li>State management.</li>
+<li>Data models.</li>
+<li>Networking.</li>
+<li>Persistence.</li>
+<li>Authentication.</li>
+<li>Theming beyond Flutter defaults.</li>
+<li>Localization.</li>
+<li>Custom platform channels.</li>
+</ul>
+<p>Add these systems deliberately when product requirements need them. When a new
+system is introduced, document its ownership, public API, and lifecycle in this
+section or a linked page.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../../getting-started/running-acta/" class="btn btn-neutral float-left" title="Running Acta"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../workflow/" class="btn btn-neutral float-right" title="Development Workflow">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../../getting-started/running-acta/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../workflow/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
