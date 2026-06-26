@@ -177,10 +177,14 @@ async def run_simulation_pipeline(
                 "total_red_zones": summary["red_zones"],
                 "total_yellow_zones": summary["yellow_zones"],
                 "total_green_zones": summary["green_zones"],
-                "explainability_card": gemini_result.get("explainability_card", {}),
-                "task_list": gemini_result.get("tasks", raw_tasks),  # Fallback to raw_tasks if missing
-                "explainability_card": card_data,
-                "task_list": raw_tasks,
+
+                "explainability_card": gemini_result.get(
+                    "explainability_card", {}
+                ),
+                "task_list": gemini_result.get(
+                    "tasks", raw_tasks
+                ),
+
                 "llm_action_plan": llm_plan_data,
                 "llm_context_snapshot": llm_context_snapshot,
             }
