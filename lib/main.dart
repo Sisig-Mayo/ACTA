@@ -10,8 +10,12 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:dio/dio.dart';
 
+import 'models/user_profile.dart';
+import 'utils/auth_storage.dart';
 import 'views/login_screen.dart';
+import 'views/app_shell.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,7 +33,7 @@ class ActaApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.dark,
       darkTheme: _buildDarkTheme(),
-      home: const LoginScreen(),
+      home: const _AuthGate(),
     );
   }
 
@@ -106,5 +110,86 @@ class ActaApp extends StatelessWidget {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     );
+  }
+}
+
+// -----------------------------------------------------------
+// Auth Gate — Session Restoration on Page Refresh
+// -----------------------------------------------------------
+
+/// Checks for a persisted auth token on startup and either
+/// restores the session (navigating to AppShell) or shows
+/// the LoginScreen.
+class _AuthGate extends ConsumerStatefulWidget {
+  const _AuthGate();
+
+  @override
+  ConsumerState<_AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends ConsumerState<_AuthGate> {
+  bool _checking = true;
+
+  final Dio _dio = Dio(BaseOptions(
+    baseUrl: 'http://localhost:8000',
+    connectTimeout: const Duration(seconds: 5),
+    receiveTimeout: const Duration(seconds: 5),
+  ));
+
+  @override
+  void initState() {
+    super.initState();
+    _tryRestoreSession();
+  }
+
+  Future<void> _tryRestoreSession() async {
+    try {
+      final token = await AuthStorage.getToken();
+      if (token == null) {
+        // No stored token — go straight to login
+        if (mounted) setState(() => _checking = false);
+        return;
+      }
+
+      // Validate the token against the backend
+      final response = await _dio.get(
+        '/api/v1/auth/me',
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final userData = response.data as Map<String, dynamic>;
+        // Restore user state
+        ref.read(authUserProvider.notifier).state =
+            UserProfile.fromJson(userData, token);
+
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const AppShell()),
+          );
+        }
+        return;
+      }
+    } catch (_) {
+      // Token invalid/expired or backend unreachable — clear it
+      await AuthStorage.clearToken();
+    }
+
+    if (mounted) setState(() => _checking = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_checking) {
+      // Show a loading indicator while validating the session
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    return const LoginScreen();
   }
 }

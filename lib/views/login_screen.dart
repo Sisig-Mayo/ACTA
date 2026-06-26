@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
 
 import '../models/user_profile.dart';
+import '../utils/auth_storage.dart';
 import 'app_shell.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -61,6 +62,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         final token = response.data['access_token'] as String;
         final userData = response.data['user'] as Map<String, dynamic>;
 
+        // Persist token so session survives page refresh
+        await AuthStorage.saveToken(token);
+
         // Set state in provider
         ref.read(authUserProvider.notifier).state = UserProfile.fromJson(userData, token);
 
@@ -92,6 +96,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
         final token = response.data['access_token'] as String;
         final userData = response.data['user'] as Map<String, dynamic>;
+
+        // Persist token so session survives page refresh
+        await AuthStorage.saveToken(token);
 
         ref.read(authUserProvider.notifier).state = UserProfile.fromJson(userData, token);
 
