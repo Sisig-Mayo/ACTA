@@ -167,6 +167,68 @@ fix(backend): correct flood zone geometry intersection threshold
 chore(repo): update dependencies and environment template
 ```
 
+## Documentation
+
+The maintained documentation lives in the `docs/` folder:
+
+- `docs/docs/` contains the editable Markdown pages.
+- `docs/mkdocs.yml` defines the documentation navigation and theme.
+- `docs/site/` is the generated static website output from MkDocs.
+
+To view the documentation locally:
+
+```bash
+cd docs
+python -m pip install mkdocs
+mkdocs serve
+```
+
+Then open the local URL printed by MkDocs, usually
+`http://127.0.0.1:8000/`.
+
+To check the docs before committing:
+
+```bash
+cd docs
+mkdocs build --strict
+```
+
+### Deploying The Documentation Website
+
+The docs can be deployed as a static website because MkDocs builds plain HTML,
+CSS, and JavaScript into `docs/site/`.
+
+Recommended process:
+
+1. Choose one canonical production site. This should be the main public
+   documentation website for ACTA.
+2. Treat any other deployments as previews, staging builds, or old experiments.
+   If there are many deployments, label them clearly and keep only one linked as
+   the main website.
+3. Build the site locally:
+
+   ```bash
+   cd docs
+   mkdocs build --strict
+   ```
+
+4. Deploy the generated `docs/site/` folder to a static host such as GitHub
+   Pages, Netlify, Vercel, Cloudflare Pages, or Firebase Hosting.
+5. After deployment, update this README with the final public documentation URL.
+
+For GitHub Pages, the simplest manual deployment is:
+
+```bash
+cd docs
+mkdocs gh-deploy --force
+```
+
+That publishes the built documentation to the repository's `gh-pages` branch.
+In the repository settings, configure GitHub Pages to serve from that branch. If
+the repository already has many Pages or hosting deployments, keep the ACTA docs
+deployment as the single production docs site and archive or rename the rest as
+preview/staging deployments.
+
 ## Quick Start
 
 ### 1. Environment Setup
