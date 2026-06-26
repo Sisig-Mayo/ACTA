@@ -414,7 +414,7 @@ class _MasterPlanBody extends ConsumerWidget {
               ...result.taskList.map((task) => TableRow(
                     children: [
                       _priorityBadge(task.priority),
-                      _tableCell(task.category),
+                      _tableCell(_formatCategory(task.category)),
                       _tableCell(task.action),
                       _tableCell('T-${task.deadlineHours} hrs'),
                     ],
@@ -438,6 +438,14 @@ class _MasterPlanBody extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  String _formatCategory(String category) {
+    if (category.isEmpty) return category;
+    return category.split('_').map((word) {
+      if (word.isEmpty) return '';
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
   }
 
   Widget _tableCell(String text) {
