@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="Acta contributors" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Project Structure - Acta Documentation</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../styles/acta.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Project Structure";
+        var mkdocs_page_input_path = "reference/project-structure.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/dart.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Acta Documentation
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">About Acta</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Product</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../product/features/">Features And Operator Value</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Getting Started</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../getting-started/installation/">Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../getting-started/running-acta/">Running Acta</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Development</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../development/architecture/">System Architecture</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../development/workflow/">Development Workflow</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Project Structure</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#flutter-application">Flutter Application</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#backend">Backend</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#database">Database</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#data-pipeline">Data Pipeline</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#documentation">Documentation</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../configuration/">Configuration</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/">API Reference</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../data-and-database/">Data And Database</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../data-pipeline/">Data Pipeline</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../llm-pipeline/">LLM Pipeline</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Operations</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../operations/troubleshooting/">Troubleshooting</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Acta Documentation</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Reference</li>
+      <li class="breadcrumb-item active">Project Structure</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="project-structure">Project Structure<a class="headerlink" href="#project-structure" title="Permanent link">&para;</a></h1>
+<p>The repository combines Flutter, FastAPI, Supabase database migrations, and
+documentation.</p>
+<pre><code class="language-text">ACTA/
+├── android/                     # Flutter Android runner
+├── ios/                         # Flutter iOS runner
+├── linux/                       # Flutter Linux runner
+├── macos/                       # Flutter macOS runner
+├── web/                         # Flutter web runner
+├── windows/                     # Flutter Windows runner
+├── lib/                         # Flutter application code
+│   ├── assets/
+│   ├── models/
+│   ├── utils/
+│   └── views/
+├── backend/                     # FastAPI backend
+│   ├── app/
+│   │   ├── core/
+│   │   ├── models/
+│   │   ├── routes/
+│   │   └── services/
+│   ├── database/
+│   ├── main.py
+│   └── requirements.txt
+├── database/                    # Supabase/PostGIS migrations and seed scripts
+│   ├── migrations/
+│   ├── seed_geojson_handler.py
+│   └── seed_roads_handler.py
+├── data_pipeline/               # Hazard telemetry ingestion job
+├── docs/
+│   ├── docs/                    # MkDocs Markdown source
+│   ├── site/                    # Generated MkDocs output
+│   └── mkdocs.yml
+├── pubspec.yaml
+├── pubspec.lock
+├── analysis_options.yaml
+├── .env.example
+└── README.md
+</code></pre>
+<h2 id="flutter-application">Flutter Application<a class="headerlink" href="#flutter-application" title="Permanent link">&para;</a></h2>
+<p><code>lib/main.dart</code></p>
+<p>: Initializes <code>ProviderScope</code>, configures the ACTA dark theme, and starts at
+  <code>LoginScreen</code>.</p>
+<p><code>lib/views/</code></p>
+<p>: Contains operator-facing screens such as login, command center, simulation
+  setup, run status, AI action plans, master action plans, and resource
+  management.</p>
+<p><code>lib/models/</code></p>
+<p>: Contains frontend state and data models for simulation, barangays, and user
+  profile handling.</p>
+<p><code>lib/utils/</code></p>
+<p>: Contains utility code such as cross-platform PDF download handling.</p>
+<h2 id="backend">Backend<a class="headerlink" href="#backend" title="Permanent link">&para;</a></h2>
+<p><code>backend/main.py</code></p>
+<p>: Creates the FastAPI app, configures CORS, registers routers, and exposes
+  <code>/health</code>.</p>
+<p><code>backend/app/core/</code></p>
+<p>: Holds configuration, Supabase client setup, Gemini integration, and constants.</p>
+<p><code>backend/app/models/</code></p>
+<p>: Holds Pydantic request and response models for simulation and LLM data.</p>
+<p><code>backend/app/routes/</code></p>
+<p>: Defines auth, simulation, routing, and barangay endpoints.</p>
+<p><code>backend/app/services/</code></p>
+<p>: Implements routing, dispatch, PDF generation, GEE risk scoring, time decay,
+  LLM context assembly, and simulation orchestration.</p>
+<h2 id="database">Database<a class="headerlink" href="#database" title="Permanent link">&para;</a></h2>
+<p><code>database/migrations/</code></p>
+<p>: SQL migrations for extensions, spatial tables, routing logic, hazard events,
+  simulation risk tables, route cost updates, barangay GeoJSON RPC, and LLM
+  result storage.</p>
+<p><code>database/seed_geojson_handler.py</code></p>
+<p>: Imports Manila barangay GeoJSON data.</p>
+<p><code>database/seed_roads_handler.py</code></p>
+<p>: Imports road network data for routing.</p>
+<h2 id="data-pipeline">Data Pipeline<a class="headerlink" href="#data-pipeline" title="Permanent link">&para;</a></h2>
+<p><code>data_pipeline/ingestor.py</code></p>
+<p>: Fetches telemetry, archives raw JSON into Supabase Storage, and inserts a
+  structured hazard event record.</p>
+<h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
+<p><code>docs/mkdocs.yml</code></p>
+<p>: Configures MkDocs navigation, theme, Markdown extensions, and custom CSS.</p>
+<p><code>docs/docs/</code></p>
+<p>: Contains the Markdown source pages for the technical documentation.</p>
+<p><code>docs/site/</code></p>
+<p>: Contains generated static HTML. Treat it as build output and regenerate it
+  from <code>docs/docs/</code> when publishing.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../../development/workflow/" class="btn btn-neutral float-left" title="Development Workflow"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../configuration/" class="btn btn-neutral float-right" title="Configuration">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../../development/workflow/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../configuration/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
