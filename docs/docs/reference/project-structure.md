@@ -1,71 +1,126 @@
 # Project Structure
 
-The repository follows Flutter's standard multi-platform layout.
+The repository combines Flutter, FastAPI, Supabase database migrations, and
+documentation.
 
 ```text
 ACTA/
-├── android/
-├── ios/
-├── lib/
-│   └── main.dart
-├── linux/
-├── macos/
-├── web/
-├── windows/
+├── android/                     # Flutter Android runner
+├── ios/                         # Flutter iOS runner
+├── linux/                       # Flutter Linux runner
+├── macos/                       # Flutter macOS runner
+├── web/                         # Flutter web runner
+├── windows/                     # Flutter Windows runner
+├── lib/                         # Flutter application code
+│   ├── assets/
+│   ├── models/
+│   ├── utils/
+│   └── views/
+├── backend/                     # FastAPI backend
+│   ├── app/
+│   │   ├── core/
+│   │   ├── models/
+│   │   ├── routes/
+│   │   └── services/
+│   ├── database/
+│   ├── main.py
+│   └── requirements.txt
+├── database/                    # Supabase/PostGIS migrations and seed scripts
+│   ├── migrations/
+│   ├── seed_geojson_handler.py
+│   └── seed_roads_handler.py
+├── data_pipeline/               # Hazard telemetry ingestion job
 ├── docs/
-│   ├── mkdocs.yml
-│   └── docs/
-├── analysis_options.yaml
+│   ├── docs/                    # MkDocs Markdown source
+│   ├── site/                    # Generated MkDocs output
+│   └── mkdocs.yml
 ├── pubspec.yaml
 ├── pubspec.lock
+├── analysis_options.yaml
+├── .env.example
 └── README.md
 ```
 
-## Application Code
+## Flutter Application
 
 `lib/main.dart`
 
-: Contains the application entry point and root widget. This is currently the
-  only Dart application source file.
+: Initializes `ProviderScope`, configures the ACTA dark theme, and starts at
+  `LoginScreen`.
 
-## Package Configuration
+`lib/views/`
 
-`pubspec.yaml`
+: Contains operator-facing screens such as login, command center, simulation
+  setup, run status, AI action plans, master action plans, and resource
+  management.
 
-: Defines package metadata, SDK constraints, runtime dependencies, development
-  dependencies, and Flutter asset settings.
+`lib/models/`
 
-`pubspec.lock`
+: Contains frontend state and data models for simulation, barangays, and user
+  profile handling.
 
-: Records resolved package versions. Keep this file committed for reproducible
-  app builds.
+`lib/utils/`
 
-`analysis_options.yaml`
+: Contains utility code such as cross-platform PDF download handling.
 
-: Configures Dart analyzer and lint rules.
+## Backend
 
-## Platform Runners
+`backend/main.py`
 
-The platform folders contain generated runner projects used by Flutter to build
-native shells:
+: Creates the FastAPI app, configures CORS, registers routers, and exposes
+  `/health`.
 
-- `android/`
-- `ios/`
-- `linux/`
-- `macos/`
-- `web/`
-- `windows/`
+`backend/app/core/`
 
-Most product code should live in `lib/`. Edit platform folders only when
-integrating platform-specific capabilities or changing app metadata.
+: Holds configuration, Supabase client setup, Gemini integration, and constants.
+
+`backend/app/models/`
+
+: Holds Pydantic request and response models for simulation and LLM data.
+
+`backend/app/routes/`
+
+: Defines auth, simulation, routing, and barangay endpoints.
+
+`backend/app/services/`
+
+: Implements routing, dispatch, PDF generation, GEE risk scoring, time decay,
+  LLM context assembly, and simulation orchestration.
+
+## Database
+
+`database/migrations/`
+
+: SQL migrations for extensions, spatial tables, routing logic, hazard events,
+  simulation risk tables, route cost updates, barangay GeoJSON RPC, and LLM
+  result storage.
+
+`database/seed_geojson_handler.py`
+
+: Imports Manila barangay GeoJSON data.
+
+`database/seed_roads_handler.py`
+
+: Imports road network data for routing.
+
+## Data Pipeline
+
+`data_pipeline/ingestor.py`
+
+: Fetches telemetry, archives raw JSON into Supabase Storage, and inserts a
+  structured hazard event record.
 
 ## Documentation
 
 `docs/mkdocs.yml`
 
-: Configures the documentation site, navigation, Markdown extensions, and
-  ReadTheDocs theme.
+: Configures MkDocs navigation, theme, Markdown extensions, and custom CSS.
 
 `docs/docs/`
 
-: Contains the Markdown source pages for the documentation site.
+: Contains the Markdown source pages for the technical documentation.
+
+`docs/site/`
+
+: Contains generated static HTML. Treat it as build output and regenerate it
+  from `docs/docs/` when publishing.

@@ -45,14 +45,21 @@
               <ul class="current">
                 <li class="toctree-l1 current"><a class="reference internal current" href="#">About Acta</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#what-is-in-the-system">What Is In The System</a>
+    <li class="toctree-l2"><a class="reference internal" href="#what-operators-use-it-for">What Operators Use It For</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#primary-runtime-flow">Primary Runtime Flow</a>
+    <li class="toctree-l2"><a class="reference internal" href="#runtime-flow">Runtime Flow</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#main-components">Main Components</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#documentation-layout">Documentation Layout</a>
     </li>
     </ul>
                 </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Product</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="product/features/">Features And Operator Value</a>
+                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Getting Started</span></p>
               <ul>
@@ -73,6 +80,19 @@
                   <li class="toctree-l1"><a class="reference internal" href="reference/project-structure/">Project Structure</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="reference/configuration/">Configuration</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="reference/api/">API Reference</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="reference/data-and-database/">Data And Database</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="reference/data-pipeline/">Data Pipeline</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="reference/llm-pipeline/">LLM Pipeline</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Operations</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="operations/troubleshooting/">Troubleshooting</a>
                   </li>
               </ul>
       </div>
@@ -98,53 +118,99 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="acta">Acta<a class="headerlink" href="#acta" title="Permanent link">&para;</a></h1>
-<p>Acta is a Flutter application scaffolded for multi-platform delivery. The
-current codebase is intentionally small: the Dart application entry point starts
-a <code>MaterialApp</code>, renders a single <code>Scaffold</code>, and displays <code>Hello World!</code> in the
-center of the screen.</p>
-<p>This documentation records the system as it exists today and gives contributors
-a stable place to add design notes as Acta grows.</p>
-<div class="admonition note">
-<p class="admonition-title">Current application scope</p>
-<p>Acta does not yet define product-specific screens, business logic, custom
-routing, persistence, networking, generated assets, or platform plugins. The
-project is currently a clean Flutter foundation.</p>
-</div>
-<h2 id="what-is-in-the-system">What Is In The System<a class="headerlink" href="#what-is-in-the-system" title="Permanent link">&para;</a></h2>
-<p>The repository contains:</p>
+                <h1 id="acta">ACTA<a class="headerlink" href="#acta" title="Permanent link">&para;</a></h1>
+<p>ACTA is a context-aware decision-to-action simulation engine for Manila disaster
+preparedness operations. It combines weather inputs, spatial risk scoring,
+PostGIS routing data, time-decayed task generation, and Gemini-assisted action
+planning into an operator dashboard for LGU response teams.</p>
+<h2 id="what-operators-use-it-for">What Operators Use It For<a class="headerlink" href="#what-operators-use-it-for" title="Permanent link">&para;</a></h2>
+<p>ACTA turns a projected hazard scenario into a reviewable response package. An
+operator can configure a flood simulation, monitor the run, inspect barangay
+risk zones, review AI-assisted task recommendations, export a master action plan,
+and dispatch the approved plan.</p>
+<p>The current implementation is strongest around hydrologic flood preparedness.
+Other hazard profiles are visible in the UI, but they should be treated as
+future expansion points unless dedicated backend models are added.</p>
+<p>The repository is a multi-part application:</p>
 <ul>
-<li>A Flutter application package named <code>acta</code>.</li>
-<li>A single Dart entry point at <code>lib/main.dart</code>.</li>
-<li>Generated platform runner projects for Android, iOS, Linux, macOS, Windows,
-  and web.</li>
-<li>Flutter lint configuration through <code>flutter_lints</code>.</li>
-<li>A MkDocs documentation project using the ReadTheDocs theme.</li>
+<li>A Flutter dashboard in <code>lib/</code>.</li>
+<li>A FastAPI backend in <code>backend/</code>.</li>
+<li>Supabase PostgreSQL/PostGIS migrations and seed scripts in <code>database/</code>.</li>
+<li>A small ingestion pipeline in <code>data_pipeline/</code>.</li>
+<li>MkDocs source documentation in <code>docs/docs/</code>.</li>
 </ul>
-<h2 id="primary-runtime-flow">Primary Runtime Flow<a class="headerlink" href="#primary-runtime-flow" title="Permanent link">&para;</a></h2>
-<p>Acta starts from <code>main()</code>:</p>
-<pre><code class="language-dart">void main() {
-  runApp(const MainApp());
-}
-</code></pre>
-<p><code>MainApp</code> is a stateless root widget. It returns a <code>MaterialApp</code> whose <code>home</code> is
-a <code>Scaffold</code> with centered text.</p>
-<p>This means there is currently no app-wide dependency container, state management
-layer, router, theme object, localization setup, or feature module boundary.</p>
+<h2 id="runtime-flow">Runtime Flow<a class="headerlink" href="#runtime-flow" title="Permanent link">&para;</a></h2>
+<ol>
+<li>An operator signs in through the Flutter dashboard.</li>
+<li>The dashboard submits simulation inputs to the FastAPI API.</li>
+<li>The backend creates a <code>simulation_runs</code> record and runs the simulation in the
+   background.</li>
+<li>The risk pipeline calculates per-barangay flood risk scores, applies route
+   cost updates, generates time-sensitive tasks, and assembles LLM context.</li>
+<li>Gemini produces a structured action plan when configured. A deterministic
+   template fallback is used when Gemini is unavailable.</li>
+<li>Results are stored in Supabase and returned to the dashboard for review,
+   export, and dispatch.</li>
+</ol>
+<h2 id="main-components">Main Components<a class="headerlink" href="#main-components" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Location</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Flutter frontend</td>
+<td><code>lib/</code></td>
+<td>Operator login, simulation setup, command center, action plans, PDF/export UI.</td>
+</tr>
+<tr>
+<td>FastAPI backend</td>
+<td><code>backend/</code></td>
+<td>Auth proxy, simulation orchestration, routing endpoints, PDF generation, dispatch.</td>
+</tr>
+<tr>
+<td>Database schema</td>
+<td><code>database/migrations/</code></td>
+<td>Supabase PostgreSQL, PostGIS, pgRouting, simulation and LLM storage tables.</td>
+</tr>
+<tr>
+<td>Seed scripts</td>
+<td><code>database/</code></td>
+<td>Import Manila barangay and road geometry data.</td>
+</tr>
+<tr>
+<td>Data pipeline</td>
+<td><code>data_pipeline/</code></td>
+<td>Fetch and archive hazard telemetry into Supabase.</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td><code>docs/docs/</code></td>
+<td>Maintained technical documentation.</td>
+</tr>
+</tbody>
+</table>
 <h2 id="documentation-layout">Documentation Layout<a class="headerlink" href="#documentation-layout" title="Permanent link">&para;</a></h2>
-<p>Use the left navigation to move through the manual:</p>
 <ul>
-<li><strong>Getting Started</strong> explains how to install dependencies and run Acta.</li>
-<li><strong>Development</strong> describes the current architecture and contribution workflow.</li>
-<li><strong>Reference</strong> documents the repository layout and configuration files.</li>
+<li><strong>Product</strong> explains the feature set, operator workflow, current capability
+  status, and recommended improvement targets.</li>
+<li><strong>Getting Started</strong> explains installation and local runtime commands.</li>
+<li><strong>Development</strong> documents architecture and workflow.</li>
+<li><strong>Reference</strong> describes structure, configuration, APIs, data, and the LLM
+  pipeline.</li>
+<li><strong>Operations</strong> contains troubleshooting guidance for common local setup issues.</li>
 </ul>
-<p>As the application gains real screens and systems, add new pages beside the
-existing sections instead of overloading this overview.</p>
+<p>Keep these docs aligned with code changes that affect setup, APIs, data
+contracts, environment variables, or operator-visible behavior.</p>
               
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="getting-started/installation/" class="btn btn-neutral float-right" title="Installation">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="product/features/" class="btn btn-neutral float-right" title="Features And Operator Value">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -168,7 +234,7 @@ existing sections instead of overloading this overview.</p>
     
     
     
-      <span><a href="getting-started/installation/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="product/features/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>
@@ -188,5 +254,5 @@ existing sections instead of overloading this overview.</p>
 
 <!--
 MkDocs version : 1.6.1
-Build Date UTC : 2026-06-26 02:46:34.386510+00:00
+Build Date UTC : 2026-06-26 07:47:16.133847+00:00
 -->

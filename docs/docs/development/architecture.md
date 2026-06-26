@@ -1,64 +1,122 @@
 # System Architecture
 
-Acta currently uses Flutter's default single-entry application shape. There is
-one Dart source file and no custom feature modules yet.
+ACTA is organized as a Flutter client, FastAPI service layer, Supabase-backed
+geospatial database, and optional AI planning layer.
 
 ## Runtime Layers
 
-The current runtime can be read as three layers:
+```text
+Flutter Dashboard
+  |
+  | HTTP JSON / PDF
+  v
+FastAPI Backend
+  |
+  | Supabase REST, async PostgreSQL, PostGIS/pgRouting
+  v
+Supabase PostgreSQL
+  |
+  | risk scores, simulation runs, routes, profiles
+  v
+Operator Results
+```
 
-1. **Platform runner** starts the Flutter engine for the selected platform.
-2. **Flutter framework** loads the Dart application and widget tree.
-3. **Acta root widget** renders the current UI.
+The backend also calls Google Earth Engine for risk scoring and Gemini for
+context-aware action planning when those integrations are configured.
 
-## Entry Point
+## Frontend
 
-`lib/main.dart` contains the full application:
+The Flutter entry point is `lib/main.dart`.
+
+`main()` initializes Flutter bindings and wraps the application in a Riverpod
+`ProviderScope`:
 
 ```dart
-import 'package:flutter/material.dart';
-
 void main() {
-  runApp(const MainApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const ProviderScope(child: ActaApp()));
 }
 ```
 
-`main()` delegates to Flutter through `runApp()`. The root widget is `MainApp`.
+`ActaApp` configures a dark Material theme and starts at `LoginScreen`. The app
+currently contains screens for login, simulation setup, simulation execution,
+command center views, AI action plans, master action plans, and resource
+management.
 
-## Root Widget
+The frontend uses:
 
-`MainApp` extends `StatelessWidget`:
+- `flutter_riverpod` for state management.
+- `dio` for HTTP calls.
+- `flutter_map` and `latlong2` for map rendering.
+- `google_fonts` for typography.
+- `json_annotation` tooling for structured models.
 
-```dart
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+Several frontend files currently use `http://localhost:8000` directly as the
+backend base URL. Replace those constants with environment-specific
+configuration before deploying beyond local development.
 
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Text('Hello World!'),
-        ),
-      ),
-    );
-  }
-}
-```
+## Backend
 
-The widget tree is:
+The FastAPI entry point is `backend/main.py`. It registers these routers:
 
-- `MaterialApp`
-- `Scaffold`
-- `Center`
-- `Text`
+- `/api/v1/auth`
+- `/api/v1/simulation`
+- `/api/v1/routing`
+- `/api/v1/barangays`
 
-Because every widget in the tree is constant, the current UI has no mutable
-state and no runtime configuration.
+The backend owns:
+
+- Supabase Auth registration/login proxying.
+- Simulation run creation and status/result retrieval.
+- Background risk pipeline execution.
+- Flood-aware routing endpoints.
+- Barangay GeoJSON retrieval.
+- PDF generation for master action plans.
+- Dispatch manifest generation.
+- LLM context snapshot retrieval for audit/debug.
+
+Configuration is loaded through `backend/app/core/config.py` from environment
+variables or the repository root `.env` file.
+
+## Database And Spatial Data
+
+Supabase PostgreSQL is expected to provide PostGIS and pgRouting support. The
+schema migrations live in `database/migrations/`.
+
+The application expects Manila barangay geometries, road network data, hazard
+events, simulation runs, barangay risk scores, and auth profile records to be
+available in the database.
+
+Raw spatial files such as GeoJSON, shapefiles, and rasters are intentionally
+ignored by Git. Store them locally under `data/raw/` and import them with the
+seed scripts.
+
+## Simulation Pipeline
+
+The simulation pipeline starts from `POST /api/v1/simulation/run`:
+
+1. Validate operator input with `SimulationInput`.
+2. Insert a `simulation_runs` row with `PENDING` status.
+3. Run the background pipeline from `backend/app/services/risk_pipeline.py`.
+4. Compute barangay risk scores through the GEE risk engine.
+5. Persist risk scores and update route cost modifiers.
+6. Generate time-decayed template tasks.
+7. Assemble a five-section LLM context document.
+8. Ask Gemini to refine the action plan, or use the fallback template response.
+9. Store results, explainability data, LLM output, and context snapshots.
+
+## LLM Boundary
+
+Gemini is an enhancement layer, not the only source of action plans. The backend
+contains a fallback response path so simulation results can still complete when
+`GEMINI_API_KEY` is missing or the Gemini API call fails.
+
+LLM context snapshots are stored for auditability and exposed through
+`GET /api/v1/simulation/llm-context/{run_id}`.
 
 ## Platform Projects
 
-The platform folders are generated Flutter runner projects:
+The platform folders are Flutter runner projects:
 
 - `android/`
 - `ios/`
@@ -67,25 +125,5 @@ The platform folders are generated Flutter runner projects:
 - `web/`
 - `windows/`
 
-These folders contain the native shell code and build metadata required by
-Flutter. Application behavior should normally be added under `lib/` unless a
-platform-specific integration is required.
-
-## Missing Application Systems
-
-The following systems do not exist yet:
-
-- Navigation and routing.
-- Feature modules.
-- State management.
-- Data models.
-- Networking.
-- Persistence.
-- Authentication.
-- Theming beyond Flutter defaults.
-- Localization.
-- Custom platform channels.
-
-Add these systems deliberately when product requirements need them. When a new
-system is introduced, document its ownership, public API, and lifecycle in this
-section or a linked page.
+Most product code should stay in `lib/`. Edit platform folders only for native
+integration, app metadata, signing, or platform-specific behavior.

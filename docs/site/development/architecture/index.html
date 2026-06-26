@@ -46,6 +46,11 @@
                 <li class="toctree-l1"><a class="reference internal" href="../..">About Acta</a>
                 </li>
               </ul>
+              <p class="caption"><span class="caption-text">Product</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../product/features/">Features And Operator Value</a>
+                  </li>
+              </ul>
               <p class="caption"><span class="caption-text">Getting Started</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../../getting-started/installation/">Installation</a>
@@ -59,13 +64,17 @@
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#runtime-layers">Runtime Layers</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#entry-point">Entry Point</a>
+    <li class="toctree-l2"><a class="reference internal" href="#frontend">Frontend</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#root-widget">Root Widget</a>
+    <li class="toctree-l2"><a class="reference internal" href="#backend">Backend</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#database-and-spatial-data">Database And Spatial Data</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#simulation-pipeline">Simulation Pipeline</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#llm-boundary">LLM Boundary</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#platform-projects">Platform Projects</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#missing-application-systems">Missing Application Systems</a>
     </li>
     </ul>
                   </li>
@@ -77,6 +86,19 @@
                   <li class="toctree-l1"><a class="reference internal" href="../../reference/project-structure/">Project Structure</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../../reference/configuration/">Configuration</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/api/">API Reference</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/data-and-database/">Data And Database</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/data-pipeline/">Data Pipeline</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/llm-pipeline/">LLM Pipeline</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Operations</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../operations/troubleshooting/">Troubleshooting</a>
                   </li>
               </ul>
       </div>
@@ -104,52 +126,100 @@
             <div class="section" itemprop="articleBody">
               
                 <h1 id="system-architecture">System Architecture<a class="headerlink" href="#system-architecture" title="Permanent link">&para;</a></h1>
-<p>Acta currently uses Flutter's default single-entry application shape. There is
-one Dart source file and no custom feature modules yet.</p>
+<p>ACTA is organized as a Flutter client, FastAPI service layer, Supabase-backed
+geospatial database, and optional AI planning layer.</p>
 <h2 id="runtime-layers">Runtime Layers<a class="headerlink" href="#runtime-layers" title="Permanent link">&para;</a></h2>
-<p>The current runtime can be read as three layers:</p>
-<ol>
-<li><strong>Platform runner</strong> starts the Flutter engine for the selected platform.</li>
-<li><strong>Flutter framework</strong> loads the Dart application and widget tree.</li>
-<li><strong>Acta root widget</strong> renders the current UI.</li>
-</ol>
-<h2 id="entry-point">Entry Point<a class="headerlink" href="#entry-point" title="Permanent link">&para;</a></h2>
-<p><code>lib/main.dart</code> contains the full application:</p>
-<pre><code class="language-dart">import 'package:flutter/material.dart';
-
-void main() {
-  runApp(const MainApp());
+<pre><code class="language-text">Flutter Dashboard
+  |
+  | HTTP JSON / PDF
+  v
+FastAPI Backend
+  |
+  | Supabase REST, async PostgreSQL, PostGIS/pgRouting
+  v
+Supabase PostgreSQL
+  |
+  | risk scores, simulation runs, routes, profiles
+  v
+Operator Results
+</code></pre>
+<p>The backend also calls Google Earth Engine for risk scoring and Gemini for
+context-aware action planning when those integrations are configured.</p>
+<h2 id="frontend">Frontend<a class="headerlink" href="#frontend" title="Permanent link">&para;</a></h2>
+<p>The Flutter entry point is <code>lib/main.dart</code>.</p>
+<p><code>main()</code> initializes Flutter bindings and wraps the application in a Riverpod
+<code>ProviderScope</code>:</p>
+<pre><code class="language-dart">void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const ProviderScope(child: ActaApp()));
 }
 </code></pre>
-<p><code>main()</code> delegates to Flutter through <code>runApp()</code>. The root widget is <code>MainApp</code>.</p>
-<h2 id="root-widget">Root Widget<a class="headerlink" href="#root-widget" title="Permanent link">&para;</a></h2>
-<p><code>MainApp</code> extends <code>StatelessWidget</code>:</p>
-<pre><code class="language-dart">class MainApp extends StatelessWidget {
-  const MainApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Text('Hello World!'),
-        ),
-      ),
-    );
-  }
-}
-</code></pre>
-<p>The widget tree is:</p>
+<p><code>ActaApp</code> configures a dark Material theme and starts at <code>LoginScreen</code>. The app
+currently contains screens for login, simulation setup, simulation execution,
+command center views, AI action plans, master action plans, and resource
+management.</p>
+<p>The frontend uses:</p>
 <ul>
-<li><code>MaterialApp</code></li>
-<li><code>Scaffold</code></li>
-<li><code>Center</code></li>
-<li><code>Text</code></li>
+<li><code>flutter_riverpod</code> for state management.</li>
+<li><code>dio</code> for HTTP calls.</li>
+<li><code>flutter_map</code> and <code>latlong2</code> for map rendering.</li>
+<li><code>google_fonts</code> for typography.</li>
+<li><code>json_annotation</code> tooling for structured models.</li>
 </ul>
-<p>Because every widget in the tree is constant, the current UI has no mutable
-state and no runtime configuration.</p>
+<p>Several frontend files currently use <code>http://localhost:8000</code> directly as the
+backend base URL. Replace those constants with environment-specific
+configuration before deploying beyond local development.</p>
+<h2 id="backend">Backend<a class="headerlink" href="#backend" title="Permanent link">&para;</a></h2>
+<p>The FastAPI entry point is <code>backend/main.py</code>. It registers these routers:</p>
+<ul>
+<li><code>/api/v1/auth</code></li>
+<li><code>/api/v1/simulation</code></li>
+<li><code>/api/v1/routing</code></li>
+<li><code>/api/v1/barangays</code></li>
+</ul>
+<p>The backend owns:</p>
+<ul>
+<li>Supabase Auth registration/login proxying.</li>
+<li>Simulation run creation and status/result retrieval.</li>
+<li>Background risk pipeline execution.</li>
+<li>Flood-aware routing endpoints.</li>
+<li>Barangay GeoJSON retrieval.</li>
+<li>PDF generation for master action plans.</li>
+<li>Dispatch manifest generation.</li>
+<li>LLM context snapshot retrieval for audit/debug.</li>
+</ul>
+<p>Configuration is loaded through <code>backend/app/core/config.py</code> from environment
+variables or the repository root <code>.env</code> file.</p>
+<h2 id="database-and-spatial-data">Database And Spatial Data<a class="headerlink" href="#database-and-spatial-data" title="Permanent link">&para;</a></h2>
+<p>Supabase PostgreSQL is expected to provide PostGIS and pgRouting support. The
+schema migrations live in <code>database/migrations/</code>.</p>
+<p>The application expects Manila barangay geometries, road network data, hazard
+events, simulation runs, barangay risk scores, and auth profile records to be
+available in the database.</p>
+<p>Raw spatial files such as GeoJSON, shapefiles, and rasters are intentionally
+ignored by Git. Store them locally under <code>data/raw/</code> and import them with the
+seed scripts.</p>
+<h2 id="simulation-pipeline">Simulation Pipeline<a class="headerlink" href="#simulation-pipeline" title="Permanent link">&para;</a></h2>
+<p>The simulation pipeline starts from <code>POST /api/v1/simulation/run</code>:</p>
+<ol>
+<li>Validate operator input with <code>SimulationInput</code>.</li>
+<li>Insert a <code>simulation_runs</code> row with <code>PENDING</code> status.</li>
+<li>Run the background pipeline from <code>backend/app/services/risk_pipeline.py</code>.</li>
+<li>Compute barangay risk scores through the GEE risk engine.</li>
+<li>Persist risk scores and update route cost modifiers.</li>
+<li>Generate time-decayed template tasks.</li>
+<li>Assemble a five-section LLM context document.</li>
+<li>Ask Gemini to refine the action plan, or use the fallback template response.</li>
+<li>Store results, explainability data, LLM output, and context snapshots.</li>
+</ol>
+<h2 id="llm-boundary">LLM Boundary<a class="headerlink" href="#llm-boundary" title="Permanent link">&para;</a></h2>
+<p>Gemini is an enhancement layer, not the only source of action plans. The backend
+contains a fallback response path so simulation results can still complete when
+<code>GEMINI_API_KEY</code> is missing or the Gemini API call fails.</p>
+<p>LLM context snapshots are stored for auditability and exposed through
+<code>GET /api/v1/simulation/llm-context/{run_id}</code>.</p>
 <h2 id="platform-projects">Platform Projects<a class="headerlink" href="#platform-projects" title="Permanent link">&para;</a></h2>
-<p>The platform folders are generated Flutter runner projects:</p>
+<p>The platform folders are Flutter runner projects:</p>
 <ul>
 <li><code>android/</code></li>
 <li><code>ios/</code></li>
@@ -158,26 +228,8 @@ state and no runtime configuration.</p>
 <li><code>web/</code></li>
 <li><code>windows/</code></li>
 </ul>
-<p>These folders contain the native shell code and build metadata required by
-Flutter. Application behavior should normally be added under <code>lib/</code> unless a
-platform-specific integration is required.</p>
-<h2 id="missing-application-systems">Missing Application Systems<a class="headerlink" href="#missing-application-systems" title="Permanent link">&para;</a></h2>
-<p>The following systems do not exist yet:</p>
-<ul>
-<li>Navigation and routing.</li>
-<li>Feature modules.</li>
-<li>State management.</li>
-<li>Data models.</li>
-<li>Networking.</li>
-<li>Persistence.</li>
-<li>Authentication.</li>
-<li>Theming beyond Flutter defaults.</li>
-<li>Localization.</li>
-<li>Custom platform channels.</li>
-</ul>
-<p>Add these systems deliberately when product requirements need them. When a new
-system is introduced, document its ownership, public API, and lifecycle in this
-section or a linked page.</p>
+<p>Most product code should stay in <code>lib/</code>. Edit platform folders only for native
+integration, app metadata, signing, or platform-specific behavior.</p>
               
             </div>
           </div><footer>

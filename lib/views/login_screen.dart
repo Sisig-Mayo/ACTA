@@ -190,22 +190,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             children: [
               // Top-Left Logo: logo-2.png (ACTA logo with "forecast into action" text)
               Positioned(
-                top: 24,
-                left: 24,
+                top: 0,
+                left: 0,
                 child: Image.asset(
                   'lib/assets/logo-2.png',
-                  height: 48,
+                  height: 130,
                   fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) {
                     return Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.shield, color: Color(0xFF13587A), size: 28),
-                        const SizedBox(width: 8),
+                        const Icon(Icons.shield, color: Color(0xFF13587A), size: 40),
+                        const SizedBox(width: 12),
                         Text(
                           'ACTA',
                           style: GoogleFonts.inter(
-                            fontSize: 22,
+                            fontSize: 32,
                             fontWeight: FontWeight.bold,
                             color: const Color(0xFF13587A),
                           ),
