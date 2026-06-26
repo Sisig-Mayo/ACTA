@@ -96,37 +96,30 @@ def generate_master_action_plan(simulation: SimulationOutput) -> bytes:
     pdf.cell(0, 10, " 3. Time-Decayed Task Ledger", ln=1, fill=True)
     pdf.ln(2)
 
-    # Table Header
-    pdf.set_font("helvetica", "B", 10)
-    pdf.cell(20, 8, "T-Minus", border=1, align="C")
-    pdf.cell(25, 8, "Priority", border=1, align="C")
-    pdf.cell(40, 8, "Category", border=1, align="C")
-    pdf.cell(105, 8, "Action Directive", border=1, align="L")
-    pdf.ln()
-
-    # Table Rows
-    pdf.set_font("helvetica", "", 9)
-    for task in simulation.task_list:
-        pdf.cell(20, 8, f"T-{task.deadline_hours}h", border=1, align="C")
+    # Task Blocks
+    for i, task in enumerate(simulation.task_list, 1):
+        pdf.set_font("helvetica", "B", 10)
+        cat_formatted = " ".join([w.capitalize() for w in task.category.split('_')])
         
-        # Priority with color logic (simplified to text for now)
-        pdf.cell(25, 8, task.priority, border=1, align="C")
-        
-        pdf.cell(40, 8, task.category[:18], border=1, align="C")
-        
-        # Calculate cell height based on text wrapping
-        action_text = task.action
-        
-        # Use simple cell for now, MultiCell inside a row requires careful X/Y tracking
-        # We truncate long actions to fit one line in this simple table layout, 
-        # or we could use multi_cell but it breaks the strict row height easily.
-        if len(action_text) > 60:
-            action_text = action_text[:57] + "..."
+        # Highlight Critical tasks in red, others in black
+        if task.priority.upper() == "CRITICAL":
+            pdf.set_text_color(220, 38, 38)
+        elif task.priority.upper() == "HIGH":
+            pdf.set_text_color(234, 88, 12)
+        else:
+            pdf.set_text_color(0, 0, 0)
             
-        pdf.cell(105, 8, f" {action_text}", border=1, align="L")
-        pdf.ln()
+        pdf.cell(0, 6, f"{i}. [T-{task.deadline_hours}h] {task.priority} Priority | {cat_formatted}", ln=1)
         
-    pdf.ln(10)
+        # Reset text color for action
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font("helvetica", "", 10)
+        
+        # MultiCell allows the long text to wrap to the next line naturally
+        pdf.multi_cell(0, 6, f"Directive: {task.action}")
+        pdf.ln(4)
+        
+    pdf.ln(5)
 
     # 4. Sign-off Section
     pdf.set_font("helvetica", "B", 12)
