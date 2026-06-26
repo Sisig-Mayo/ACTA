@@ -1,52 +1,62 @@
-# Acta
+# ACTA
 
-Acta is a Flutter application scaffolded for multi-platform delivery. The
-current codebase is intentionally small: the Dart application entry point starts
-a `MaterialApp`, renders a single `Scaffold`, and displays `Hello World!` in the
-center of the screen.
+ACTA is a context-aware decision-to-action simulation engine for Manila disaster
+preparedness operations. It combines weather inputs, spatial risk scoring,
+PostGIS routing data, time-decayed task generation, and Gemini-assisted action
+planning into an operator dashboard for LGU response teams.
 
-This documentation records the system as it exists today and gives contributors
-a stable place to add design notes as Acta grows.
+## What Operators Use It For
 
-!!! note "Current application scope"
-    Acta does not yet define product-specific screens, business logic, custom
-    routing, persistence, networking, generated assets, or platform plugins. The
-    project is currently a clean Flutter foundation.
+ACTA turns a projected hazard scenario into a reviewable response package. An
+operator can configure a flood simulation, monitor the run, inspect barangay
+risk zones, review AI-assisted task recommendations, export a master action plan,
+and dispatch the approved plan.
 
-## What Is In The System
+The current implementation is strongest around hydrologic flood preparedness.
+Other hazard profiles are visible in the UI, but they should be treated as
+future expansion points unless dedicated backend models are added.
 
-The repository contains:
+The repository is a multi-part application:
 
-- A Flutter application package named `acta`.
-- A single Dart entry point at `lib/main.dart`.
-- Generated platform runner projects for Android, iOS, Linux, macOS, Windows,
-  and web.
-- Flutter lint configuration through `flutter_lints`.
-- A MkDocs documentation project using the ReadTheDocs theme.
+- A Flutter dashboard in `lib/`.
+- A FastAPI backend in `backend/`.
+- Supabase PostgreSQL/PostGIS migrations and seed scripts in `database/`.
+- A small ingestion pipeline in `data_pipeline/`.
+- MkDocs source documentation in `docs/docs/`.
 
-## Primary Runtime Flow
+## Runtime Flow
 
-Acta starts from `main()`:
+1. An operator signs in through the Flutter dashboard.
+2. The dashboard submits simulation inputs to the FastAPI API.
+3. The backend creates a `simulation_runs` record and runs the simulation in the
+   background.
+4. The risk pipeline calculates per-barangay flood risk scores, applies route
+   cost updates, generates time-sensitive tasks, and assembles LLM context.
+5. Gemini produces a structured action plan when configured. A deterministic
+   template fallback is used when Gemini is unavailable.
+6. Results are stored in Supabase and returned to the dashboard for review,
+   export, and dispatch.
 
-```dart
-void main() {
-  runApp(const MainApp());
-}
-```
+## Main Components
 
-`MainApp` is a stateless root widget. It returns a `MaterialApp` whose `home` is
-a `Scaffold` with centered text.
-
-This means there is currently no app-wide dependency container, state management
-layer, router, theme object, localization setup, or feature module boundary.
+| Component | Location | Purpose |
+| --- | --- | --- |
+| Flutter frontend | `lib/` | Operator login, simulation setup, command center, action plans, PDF/export UI. |
+| FastAPI backend | `backend/` | Auth proxy, simulation orchestration, routing endpoints, PDF generation, dispatch. |
+| Database schema | `database/migrations/` | Supabase PostgreSQL, PostGIS, pgRouting, simulation and LLM storage tables. |
+| Seed scripts | `database/` | Import Manila barangay and road geometry data. |
+| Data pipeline | `data_pipeline/` | Fetch and archive hazard telemetry into Supabase. |
+| Documentation | `docs/docs/` | Maintained technical documentation. |
 
 ## Documentation Layout
 
-Use the left navigation to move through the manual:
+- **Product** explains the feature set, operator workflow, current capability
+  status, and recommended improvement targets.
+- **Getting Started** explains installation and local runtime commands.
+- **Development** documents architecture and workflow.
+- **Reference** describes structure, configuration, APIs, data, and the LLM
+  pipeline.
+- **Operations** contains troubleshooting guidance for common local setup issues.
 
-- **Getting Started** explains how to install dependencies and run Acta.
-- **Development** describes the current architecture and contribution workflow.
-- **Reference** documents the repository layout and configuration files.
-
-As the application gains real screens and systems, add new pages beside the
-existing sections instead of overloading this overview.
+Keep these docs aligned with code changes that affect setup, APIs, data
+contracts, environment variables, or operator-visible behavior.

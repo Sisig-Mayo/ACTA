@@ -19,6 +19,33 @@
 
 ---
 
+## What ACTA Does
+
+ACTA supports a Manila LGU flood preparedness workflow:
+
+- Monitor operational context in a Command Center with barangay risk maps,
+  alerts, priority areas, and resource summaries.
+- Configure hydrologic flood simulations with wind, rainfall, preparation
+  window, storm track, and storm radius inputs.
+- Run simulations asynchronously through FastAPI and store status/results in
+  Supabase.
+- Score barangays into green, yellow, and red risk zones.
+- Generate time-decayed response tasks based on the remaining preparation
+  window.
+- Produce Gemini-assisted action plans with explainability cards and an
+  auditable LLM context snapshot, with deterministic fallback output when Gemini
+  is unavailable.
+- Review, approve, export, and dispatch a Master Action Plan PDF.
+- Query flood-aware routing and barangay boundaries through backend APIs.
+
+Current improvement targets are documented in
+`docs/docs/product/features.md`. The main gaps are live resource inventory,
+accurate result centroids, fuller routing UI integration, dispatch audit history,
+and either implementing or hiding non-flood hazard profiles until they have
+dedicated backend models.
+
+---
+
 ## LLM Pipeline Architecture
 
 The LLM pipeline assembles all available basic parameters and simulation data into a structured context document, which is fed to Gemini AI with a domain-specific system prompt to produce a fully context-aware disaster response action plan.
@@ -157,7 +184,16 @@ Run migrations against your Supabase PostgreSQL instance:
 -- Execute in order via Supabase SQL Editor or psql
 \i database/migrations/001_extensions_and_tables.sql
 \i database/migrations/002_routing_logic.sql
+\i database/migrations/003_meteorological_data.sql
+\i database/migrations/004_simulation_risk_tables.sql
+\i database/migrations/005_dynamic_route_cost.sql
+\i database/migrations/006_optimized_routing.sql
+\i database/migrations/007_barangay_geojson_rpc.sql
+\i database/migrations/007_llm_pipeline_columns.sql
 ```
+
+> Note: the repository currently has two `007_*` migrations. Keep their
+> execution order explicit until one file is renumbered.
 
 ### 3. Seed Barangay Data
 

@@ -46,13 +46,28 @@
                 <li class="toctree-l1"><a class="reference internal" href="../..">About Acta</a>
                 </li>
               </ul>
+              <p class="caption"><span class="caption-text">Product</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../product/features/">Features And Operator Value</a>
+                  </li>
+              </ul>
               <p class="caption"><span class="caption-text">Getting Started</span></p>
               <ul class="current">
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Installation</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#requirements">Requirements</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#fetch-dependencies">Fetch Dependencies</a>
+    <li class="toctree-l2"><a class="reference internal" href="#environment-file">Environment File</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#frontend-dependencies">Frontend Dependencies</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#backend-dependencies">Backend Dependencies</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#data-pipeline-dependencies">Data Pipeline Dependencies</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#database-migrations">Database Migrations</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#spatial-seed-data">Spatial Seed Data</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#documentation-tools">Documentation Tools</a>
     </li>
@@ -73,6 +88,19 @@
                   <li class="toctree-l1"><a class="reference internal" href="../../reference/project-structure/">Project Structure</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../../reference/configuration/">Configuration</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/api/">API Reference</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/data-and-database/">Data And Database</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/data-pipeline/">Data Pipeline</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/llm-pipeline/">LLM Pipeline</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Operations</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../operations/troubleshooting/">Troubleshooting</a>
                   </li>
               </ul>
       </div>
@@ -100,40 +128,80 @@
             <div class="section" itemprop="articleBody">
               
                 <h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h1>
-<p>Acta is a Flutter project. A working Flutter SDK is required before the app can
-be built or run.</p>
+<p>ACTA requires Flutter, Python, and a Supabase PostgreSQL project with the
+extensions and tables defined by the repository migrations.</p>
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Flutter SDK compatible with Dart <code>^3.12.2</code>.</li>
-<li>A platform toolchain for the target you want to run:</li>
-<li>Android Studio or Android command-line tools for Android.</li>
-<li>Xcode for iOS and macOS.</li>
-<li>A modern browser for web.</li>
-<li>Linux desktop dependencies for Linux.</li>
-<li>Visual Studio with desktop C++ tooling for Windows.</li>
+<li>Python 3.11 or newer for the backend.</li>
+<li>Supabase project with PostgreSQL, PostGIS, and pgRouting support.</li>
+<li>Google Gemini API key if AI-generated action plans should run.</li>
+<li>Google Earth Engine credentials if GEE-backed risk scoring should run.</li>
+<li>Platform toolchains for any Flutter target you plan to build.</li>
 </ul>
-<p>Check your local environment with:</p>
+<p>Check Flutter locally:</p>
 <pre><code class="language-sh">flutter doctor
+flutter devices
 </code></pre>
-<p>Resolve any missing platform requirements reported by Flutter before running the
-application.</p>
-<h2 id="fetch-dependencies">Fetch Dependencies<a class="headerlink" href="#fetch-dependencies" title="Permanent link">&para;</a></h2>
+<h2 id="environment-file">Environment File<a class="headerlink" href="#environment-file" title="Permanent link">&para;</a></h2>
+<p>Create a local <code>.env</code> from the checked-in example:</p>
+<pre><code class="language-sh">cp .env.example .env
+</code></pre>
+<p>Fill in the Supabase and Google values required for the services you want to
+run. The backend reads <code>.env</code> from the repository root.</p>
+<p>Never commit <code>.env</code>; it is intentionally ignored.</p>
+<h2 id="frontend-dependencies">Frontend Dependencies<a class="headerlink" href="#frontend-dependencies" title="Permanent link">&para;</a></h2>
 <p>From the repository root:</p>
 <pre><code class="language-sh">flutter pub get
 </code></pre>
-<p>The project currently depends only on the Flutter SDK at runtime. Development
-uses <code>flutter_test</code> and <code>flutter_lints</code>.</p>
-<h2 id="documentation-tools">Documentation Tools<a class="headerlink" href="#documentation-tools" title="Permanent link">&para;</a></h2>
-<p>The documentation site is built with MkDocs:</p>
-<pre><code class="language-sh">mkdocs serve
+<p>The Flutter app uses Riverpod, Dio, Flutter Map, Google Fonts, intl, and JSON
+generation tooling in addition to the Flutter SDK.</p>
+<h2 id="backend-dependencies">Backend Dependencies<a class="headerlink" href="#backend-dependencies" title="Permanent link">&para;</a></h2>
+<p>From the repository root:</p>
+<pre><code class="language-sh">cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 </code></pre>
-<p>The MkDocs configuration lives at <code>docs/mkdocs.yml</code>, and the documentation pages
-live under <code>docs/docs/</code>.</p>
+<p>On Windows, activate the virtual environment with:</p>
+<pre><code class="language-bat">.venv\Scripts\activate
+</code></pre>
+<h2 id="data-pipeline-dependencies">Data Pipeline Dependencies<a class="headerlink" href="#data-pipeline-dependencies" title="Permanent link">&para;</a></h2>
+<p>The ingestion pipeline has its own requirements file:</p>
+<pre><code class="language-sh">cd data_pipeline
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+</code></pre>
+<h2 id="database-migrations">Database Migrations<a class="headerlink" href="#database-migrations" title="Permanent link">&para;</a></h2>
+<p>Apply the SQL files in <code>database/migrations/</code> to the Supabase PostgreSQL
+database in filename order.</p>
+<div class="admonition warning">
+<p class="admonition-title">Duplicate migration number</p>
+<p>The repository currently contains both <code>007_barangay_geojson_rpc.sql</code> and
+<code>007_llm_pipeline_columns.sql</code>. Keep their execution order explicit in your
+migration process until one of them is renumbered.</p>
+</div>
+<h2 id="spatial-seed-data">Spatial Seed Data<a class="headerlink" href="#spatial-seed-data" title="Permanent link">&para;</a></h2>
+<p>Raw geospatial files are not committed. Place local source files under
+<code>data/raw/</code> and run the relevant seed scripts:</p>
+<pre><code class="language-sh">cd database
+python seed_geojson_handler.py --file ../data/raw/manila.geojson
+python seed_roads_handler.py --file ../data/raw/manila_roads.geojson
+</code></pre>
+<p>Confirm the expected file names and geometry fields before running imports in a
+shared database.</p>
+<h2 id="documentation-tools">Documentation Tools<a class="headerlink" href="#documentation-tools" title="Permanent link">&para;</a></h2>
+<p>MkDocs builds the technical documentation:</p>
+<pre><code class="language-sh">mkdocs serve -f docs/mkdocs.yml
+mkdocs build -f docs/mkdocs.yml
+</code></pre>
+<p>Documentation source lives under <code>docs/docs/</code>.</p>
               
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../.." class="btn btn-neutral float-left" title="About Acta"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../../product/features/" class="btn btn-neutral float-left" title="Features And Operator Value"><span class="icon icon-circle-arrow-left"></span> Previous</a>
         <a href="../running-acta/" class="btn btn-neutral float-right" title="Running Acta">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
@@ -157,7 +225,7 @@ live under <code>docs/docs/</code>.</p>
   <span class="rst-current-version" data-toggle="rst-current-version">
     
     
-      <span><a href="../.." style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../../product/features/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
       <span><a href="../running-acta/" style="color: #fcfcfc">Next &raquo;</a></span>

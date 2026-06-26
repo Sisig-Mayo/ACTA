@@ -46,6 +46,11 @@
                 <li class="toctree-l1"><a class="reference internal" href="../..">About Acta</a>
                 </li>
               </ul>
+              <p class="caption"><span class="caption-text">Product</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../product/features/">Features And Operator Value</a>
+                  </li>
+              </ul>
               <p class="caption"><span class="caption-text">Getting Started</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../../getting-started/installation/">Installation</a>
@@ -65,6 +70,8 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#testing">Testing</a>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#database-changes">Database Changes</a>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#documentation-changes">Documentation Changes</a>
     </li>
     </ul>
@@ -75,6 +82,19 @@
                   <li class="toctree-l1"><a class="reference internal" href="../../reference/project-structure/">Project Structure</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../../reference/configuration/">Configuration</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/api/">API Reference</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/data-and-database/">Data And Database</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/data-pipeline/">Data Pipeline</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/llm-pipeline/">LLM Pipeline</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Operations</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../operations/troubleshooting/">Troubleshooting</a>
                   </li>
               </ul>
       </div>
@@ -102,49 +122,67 @@
             <div class="section" itemprop="articleBody">
               
                 <h1 id="development-workflow">Development Workflow<a class="headerlink" href="#development-workflow" title="Permanent link">&para;</a></h1>
-<p>This page records the expected workflow for changing Acta.</p>
+<p>This page records the expected workflow for changing ACTA.</p>
 <h2 id="before-making-changes">Before Making Changes<a class="headerlink" href="#before-making-changes" title="Permanent link">&para;</a></h2>
-<p>Install dependencies:</p>
+<p>Install frontend dependencies:</p>
 <pre><code class="language-sh">flutter pub get
 </code></pre>
-<p>Check that Flutter sees your target platform:</p>
+<p>Install backend dependencies:</p>
+<pre><code class="language-sh">cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+</code></pre>
+<p>Confirm Flutter can see the target platform:</p>
 <pre><code class="language-sh">flutter doctor
 flutter devices
 </code></pre>
 <h2 id="code-style">Code Style<a class="headerlink" href="#code-style" title="Permanent link">&para;</a></h2>
-<p>Acta uses the Flutter recommended lint package:</p>
-<pre><code class="language-yaml">dev_dependencies:
-  flutter_lints: ^6.0.0
-</code></pre>
-<p>Analyze the project with:</p>
+<p>Analyze Flutter code with:</p>
 <pre><code class="language-sh">flutter analyze
 </code></pre>
-<p>Keep Dart code formatted with:</p>
+<p>Format Dart code with:</p>
 <pre><code class="language-sh">dart format .
 </code></pre>
+<p>Keep Python changes formatted consistently with the surrounding backend code.
+The repository does not currently define a Python formatter command.</p>
 <h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
-<p>The project includes the <code>flutter_test</code> dependency, but no test files are
-currently present.</p>
-<p>When behavior is added, prefer focused widget tests for UI behavior and unit
-tests for pure Dart logic.</p>
-<p>Run tests with:</p>
+<p>Run Flutter tests:</p>
 <pre><code class="language-sh">flutter test
 </code></pre>
+<p>Run backend tests from the <code>backend/</code> directory:</p>
+<pre><code class="language-sh">pytest
+</code></pre>
+<p>If <code>pytest</code> is not available in the active environment, install the test tool in
+the backend virtual environment before running the suite.</p>
+<h2 id="database-changes">Database Changes<a class="headerlink" href="#database-changes" title="Permanent link">&para;</a></h2>
+<p>Put schema changes in <code>database/migrations/</code>. Use monotonically increasing
+filenames and avoid duplicate migration numbers.</p>
+<p>When a migration changes API behavior or required seed data, update:</p>
+<ul>
+<li><code>docs/docs/reference/data-and-database.md</code></li>
+<li><code>docs/docs/reference/api.md</code></li>
+<li><code>.env.example</code> if new environment values are needed.</li>
+</ul>
 <h2 id="documentation-changes">Documentation Changes<a class="headerlink" href="#documentation-changes" title="Permanent link">&para;</a></h2>
-<p>Documentation lives in <code>docs/docs/</code>. Update it when a change affects:</p>
+<p>Documentation source lives in <code>docs/docs/</code>. Update docs when a change affects:</p>
 <ul>
 <li>Startup flow.</li>
+<li>Environment variables.</li>
 <li>Project structure.</li>
-<li>Build or run commands.</li>
-<li>Architecture.</li>
+<li>API contracts.</li>
+<li>Database or spatial data contracts.</li>
+<li>Simulation or LLM behavior.</li>
 <li>Public conventions contributors should follow.</li>
 </ul>
-<p>Preview the site locally with:</p>
+<p>Preview locally:</p>
 <pre><code class="language-sh">mkdocs serve -f docs/mkdocs.yml
 </code></pre>
-<p>Build the static documentation with:</p>
+<p>Build static docs:</p>
 <pre><code class="language-sh">mkdocs build -f docs/mkdocs.yml
 </code></pre>
+<p><code>docs/site/</code> is generated MkDocs output. Rebuild it from source when publishing
+the documentation site.</p>
               
             </div>
           </div><footer>
