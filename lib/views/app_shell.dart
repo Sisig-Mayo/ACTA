@@ -13,12 +13,14 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../models/user_profile.dart';
 import '../models/simulation_state.dart';
+import '../utils/auth_storage.dart';
 import 'command_center_screen.dart';
 import 'simulation_setup_screen.dart';
 import 'run_simulation_screen.dart';
 import 'ai_action_plan_screen.dart';
 import 'resource_management_screen.dart';
 import 'master_action_plan_screen.dart';
+import 'login_screen.dart';
 
 // -----------------------------------------------------------
 // Navigation State
@@ -245,6 +247,23 @@ class _Sidebar extends ConsumerWidget {
                 icon: Icons.settings_outlined, label: 'Settings'),
             isSelected: false,
             onTap: () {},
+          ),
+          _NavTile(
+            item: const _NavItem(
+                icon: Icons.logout_outlined, label: 'Logout'),
+            isSelected: false,
+            onTap: () async {
+              await AuthStorage.clearToken();
+              ref.read(authUserProvider.notifier).state = null;
+              if (context.mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (_) => const _LogoutRedirect(),
+                  ),
+                  (_) => false,
+                );
+              }
+            },
           ),
           const SizedBox(height: 8),
         ],
@@ -508,5 +527,20 @@ class PageHeader extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+// -----------------------------------------------------------
+// Logout Redirect Helper
+// -----------------------------------------------------------
+
+/// Navigates back to the login screen after logout.
+/// Used to avoid circular import issues between login and app_shell.
+class _LogoutRedirect extends StatelessWidget {
+  const _LogoutRedirect();
+
+  @override
+  Widget build(BuildContext context) {
+    return const LoginScreen();
   }
 }

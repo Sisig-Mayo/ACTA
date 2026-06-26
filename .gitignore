@@ -36,7 +36,6 @@ build/
 generated_plugin_registrant.dart
 
 # Flutter web
-lib/generated_plugin_registrant.dart
 
 # Android
 android/.gradle/
