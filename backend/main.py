@@ -83,7 +83,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
-    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$|^https://.*\.vercel\.app$",
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$|^https://.*\.vercel\.app$|^https://.*\.github\.io$",
     allow_credentials=(("*" not in settings.cors_origins_list)),
     allow_methods=["*"],
     allow_headers=["*"],
@@ -130,3 +130,18 @@ async def health_check() -> dict[str, str]:
         "service": settings.PROJECT_NAME,
         "version": "0.1.0",
     }
+
+@app.get("/test-db", tags=["System"])
+async def test_db() -> dict[str, str]:
+    """Test database connection directly to debug Railway hanging issue."""
+    import asyncpg
+    try:
+        db_url = settings.SUPABASE_DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
+        pool = await asyncpg.create_pool(dsn=db_url, min_size=1, max_size=1, command_timeout=5.0)
+        async with pool.acquire() as conn:
+            result = await conn.fetchval("SELECT 1")
+        await pool.close()
+        return {"status": "success", "result": str(result), "url_prefix": db_url[:25] + "..."}
+    except Exception as e:
+        import traceback
+        return {"status": "error", "error": str(e), "traceback": traceback.format_exc()}
