@@ -124,7 +124,7 @@ async def generate_explainability_card(
             contents=prompt,
             config=types.GenerateContentConfig(
                 temperature=0.4,
-                max_output_tokens=4096,
+                max_output_tokens=8192,
                 response_mime_type="application/json",
                 response_schema={
                     "type": "object",
@@ -179,9 +179,16 @@ def _build_prompt(
 ) -> str:
     """Construct the structured prompt for Gemini."""
     
-    # Format the impacted barangays to include their specific population and risk level
+    # Sort barangays by risk_tier (RED first) and then by population (descending)
+    def sort_key(b):
+        tier_weight = 0 if b['risk_tier'] == 'RED' else 1
+        return (tier_weight, -int(b.get('population', 0)))
+        
+    sorted_barangays = sorted(barangays, key=sort_key)
+    top_barangays = sorted_barangays[:20]
+
     b_strings = []
-    for b in barangays:
+    for b in top_barangays:
         b_strings.append(f"{b['barangay_name']} ({b['risk_tier']} zone, Population: {b['population']})")
     
     barangay_list = "\n".join(b_strings)
@@ -203,7 +210,7 @@ SIMULATION PARAMETERS:
 - Planning Phase: {context.get('planning_phase', 'N/A')}
 - Severity Tier: {context.get('severity_tier', 'N/A')}
 
-IMPACTED BARANGAYS (RED/YELLOW ZONES) WITH POPULATION DATA:
+IMPACTED BARANGAYS (TOP {len(top_barangays)} CRITICAL OUT OF {len(barangays)}):
 {barangay_list}
 
 BASE GUIDELINE ACTIONS (PAGASA-Aligned):
@@ -219,19 +226,8 @@ You must adjust your tone and focus based on the Planning Phase:
 TASK GENERATION INSTRUCTIONS:
 Do NOT return generic tasks. You must use the Base Guideline Actions as a starting point, but transform them into specific directives targeting the Impacted Barangays based on their risk tier and population.
 Example: "Dispatch 5 rescue boats and 10 transport trucks to Barangay 652 to evacuate 39 high-risk residents before T-36h."
-Scale the required resources smartly to the population size of the affected high-risk areas (RED/YELLOW ZONES). Ensure your action plan is hyperlocalized and context-aware of the 897 barangays database. Generate 15-20 highly impactful, specific tasks across various categories to make this a comprehensive master action plan.
-
-Respond with a JSON object containing exactly these keys:
-1. "explainability_card": A nested object containing:
-   - "summary": A one-paragraph executive summary (3-4 sentences max) incorporating the PAGASA classifications.
-   - "risk_narrative": Plain-language explanation of the threat scenario referencing the impacted populations.
-   - "action_rationale": Why these specific actions and resource allocations were prioritized.
-   - "confidence_note": Caveats about model limitations and data freshness.
-2. "tasks": An array of highly specific task objects, each containing:
-   - "priority": "LOW", "MEDIUM", "HIGH", or "CRITICAL".
-   - "action": The specific action directive mentioning barangay names and population-scaled resource numbers.
-   - "deadline_hours": Integer hours before impact.
-   - "category": e.g., "evacuation", "logistics", "infrastructure_operations", "medical".
+Scale the required resources smartly to the population size of the affected high-risk areas. Ensure your action plan is hyperlocalized and context-aware of the 897 barangays database. Generate 10-15 highly impactful, specific tasks across various categories, explicitly targeting the top critical barangays provided above to maximize life-saving impact.
+IMPORTANT: Ensure your output is strictly valid JSON. Escape any double quotes or special characters inside strings to prevent JSON parsing errors!
 
 Write for a non-technical audience. Use clear, direct language. Avoid jargon. Strictly focus your explanation on the City of Manila and its barangays, do not include or mention other cities or provinces outside Manila."""
 
@@ -406,7 +402,7 @@ INSTRUCTIONS:
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_INSTRUCTION,
                 temperature=0.3,
-                max_output_tokens=4096,
+                max_output_tokens=8192,
                 response_mime_type="application/json",
                 response_schema=_ACTION_PLAN_SCHEMA,
             ),
