@@ -27,7 +27,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _isLoading = false;
 
   final Dio _dio = Dio(BaseOptions(
-    baseUrl: 'http://localhost:8000',
+    baseUrl: 'https://acta-backend-production.up.railway.app',
     connectTimeout: const Duration(seconds: 10),
     receiveTimeout: const Duration(seconds: 30),
   ));

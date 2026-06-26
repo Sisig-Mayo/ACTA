@@ -91,7 +91,7 @@ class _SimulationSetupContentState
 
     try {
       final dio = Dio(BaseOptions(
-        baseUrl: 'http://localhost:8000',
+        baseUrl: 'https://acta-backend-production.up.railway.app',
         connectTimeout: const Duration(seconds: 10),
         receiveTimeout: const Duration(seconds: 60),
       ));

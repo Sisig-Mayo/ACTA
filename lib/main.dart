@@ -131,7 +131,7 @@ class _AuthGateState extends ConsumerState<_AuthGate> {
   bool _checking = true;
 
   final Dio _dio = Dio(BaseOptions(
-    baseUrl: 'http://localhost:8000',
+    baseUrl: 'https://acta-backend-production.up.railway.app',
     connectTimeout: const Duration(seconds: 5),
     receiveTimeout: const Duration(seconds: 5),
   ));

@@ -35,7 +35,7 @@ class BarangayPolygon {
 final barangayPolygonsProvider =
     FutureProvider<List<BarangayPolygon>>((ref) async {
   final dio = Dio(BaseOptions(
-    baseUrl: 'http://localhost:8000',
+    baseUrl: 'https://acta-backend-production.up.railway.app',
     connectTimeout: const Duration(seconds: 15),
     receiveTimeout: const Duration(seconds: 30),
   ));
