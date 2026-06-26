@@ -36,6 +36,9 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",
+        # On Vercel, env vars are injected as system env variables.
+        # The .env file is not present in production — this is fine because
+        # pydantic-settings reads OS env vars first before the file.
     )
 
     # --- Project ---
