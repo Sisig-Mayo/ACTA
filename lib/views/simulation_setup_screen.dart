@@ -27,8 +27,6 @@ final _pumpingStatusProvider =
     StateProvider<String>((ref) => '3 Offline');
 final _rescueAssetsProvider =
     StateProvider<String>((ref) => '12 Boats Available');
-final _affectedDistrictProvider =
-    StateProvider<String>((ref) => 'All Districts (NCR)');
 final _notesProvider = StateProvider<String>((ref) => '');
 
 // -----------------------------------------------------------
@@ -72,8 +70,14 @@ class _SimulationSetupContentState
     final profile = ref.read(simProfileProvider);
     final rainfall = double.tryParse(_rainfallCtrl.text) ?? 120.0;
     final wind = double.tryParse(_windCtrl.text) ?? 65.0;
-    final prepWindow =
-        int.tryParse(ref.read(_prepWindowProvider).split(' ').first) ?? 24;
+    final prepWindowStr = ref.read(_prepWindowProvider);
+    int prepWindow = 24;
+    if (prepWindowStr == '1 Week') prepWindow = 168;
+    else if (prepWindowStr == '2 Weeks') prepWindow = 336;
+    else if (prepWindowStr == '1 Month') prepWindow = 720;
+    else if (prepWindowStr == '3 Months') prepWindow = 2160;
+    else if (prepWindowStr == '6 Months') prepWindow = 4320;
+    else prepWindow = int.tryParse(prepWindowStr.split(' ').first) ?? 24;
 
     // Save snapshot for display in run screen
     ref.read(simulationInputSnapshotProvider.notifier).state = {
@@ -81,15 +85,9 @@ class _SimulationSetupContentState
       'rainfall_mm': rainfall,
       'wind_kph': wind,
       'prep_hours': prepWindow,
-      'affected_districts': ref.read(_affectedDistrictProvider),
       'pumping_status': ref.read(_pumpingStatusProvider),
       'rescue_assets': ref.read(_rescueAssetsProvider),
     };
-
-    ref.read(simulationRunStateProvider.notifier).state =
-        SimulationRunState.running;
-    ref.read(runSimulationActiveProvider.notifier).state = true;
-    ref.read(shellIndexProvider.notifier).state = 1;
 
     try {
       final dio = Dio(BaseOptions(
@@ -112,20 +110,33 @@ class _SimulationSetupContentState
         },
       );
 
-      if (response.statusCode == 200 && response.data != null) {
-        ref.read(simulationResultProvider.notifier).state =
-            SimulationOutput.fromJson(
-                response.data as Map<String, dynamic>);
+      // Backend returns 202 with { run_id, status, message }
+      if ((response.statusCode == 200 || response.statusCode == 202) &&
+          response.data != null) {
+        final runId = response.data['run_id'] as String;
+        if (!mounted) return;
+        
+        // Safely set all states now that we have runId
+        ref.read(simulationRunIdProvider.notifier).state = runId;
+        ref.read(simulationProgressProvider.notifier).state = 0;
+        ref.read(simulationRunStateProvider.notifier).state =
+            SimulationRunState.running;
+        
+        // Switch tabs
+        ref.read(runSimulationActiveProvider.notifier).state = true;
+        ref.read(shellIndexProvider.notifier).state = 1;
+      } else {
+        throw Exception('Unexpected response: ${response.statusCode}');
       }
-      ref.read(simulationRunStateProvider.notifier).state =
-          SimulationRunState.completed;
     } on DioException catch (e) {
+      if (!mounted) return;
       ref.read(simulationErrorProvider.notifier).state =
           e.response?.data?['detail']?.toString() ??
               'Connection error: ${e.message}';
       ref.read(simulationRunStateProvider.notifier).state =
           SimulationRunState.error;
     } catch (e) {
+      if (!mounted) return;
       ref.read(simulationErrorProvider.notifier).state = e.toString();
       ref.read(simulationRunStateProvider.notifier).state =
           SimulationRunState.error;
@@ -144,8 +155,6 @@ class _SimulationSetupContentState
     ref.read(_pumpingStatusProvider.notifier).state = '3 Offline';
     ref.read(_rescueAssetsProvider.notifier).state =
         '12 Boats Available';
-    ref.read(_affectedDistrictProvider.notifier).state =
-        'All Districts (NCR)';
   }
 
   @override
@@ -369,7 +378,6 @@ class _ParametersForm extends ConsumerWidget {
     final prepWindow = ref.watch(_prepWindowProvider);
     final pumpingStatus = ref.watch(_pumpingStatusProvider);
     final rescueAssets = ref.watch(_rescueAssetsProvider);
-    final affectedDistricts = ref.watch(_affectedDistrictProvider);
     var notesLength = ref.watch(_notesProvider).length;
 
     return Container(
@@ -382,15 +390,15 @@ class _ParametersForm extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row 1: Rainfall | Wind | Districts
+          // Row 1: Rainfall | Wind
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: _paramField(
-                  label: 'Rainfall Volume (mm/hr)',
+                  label: '24h Rainfall (mm)',
                   hint: '120',
-                  helper: 'Typical range 20 - 300mm',
+                  helper: 'GREEN: <180 | YELLOW: <360 | ORANGE: <720 | RED: 720+',
                   controller: rainfallCtrl,
                   suffix: 'mm',
                   isNumeric: true,
@@ -401,32 +409,10 @@ class _ParametersForm extends ConsumerWidget {
                 child: _paramField(
                   label: 'Wind Speed (km/h)',
                   hint: '65',
-                  helper: 'Typical range 10 - 150 km/h',
+                  helper: 'TD: ≤61 | TS: 62-88 | TY: 118-184 | STY: ≥185',
                   controller: windCtrl,
                   suffix: 'km/h',
                   isNumeric: true,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _paramDropdown(
-                  label: 'Affected District(s)',
-                  helper: 'Select one or more districts',
-                  value: affectedDistricts,
-                  items: const [
-                    'All Districts (NCR)',
-                    'Tondo',
-                    'Sampaloc',
-                    'Pandacan',
-                    'Paco',
-                    'Malate',
-                    'Ermita',
-                    'Binondo',
-                    'Santa Cruz',
-                  ],
-                  onChanged: (v) => ref
-                      .read(_affectedDistrictProvider.notifier)
-                      .state = v!,
                 ),
               ),
             ],
@@ -448,7 +434,11 @@ class _ParametersForm extends ConsumerWidget {
                     '12 Hours',
                     '24 Hours',
                     '48 Hours',
-                    '72 Hours',
+                    '1 Week',
+                    '2 Weeks',
+                    '1 Month',
+                    '3 Months',
+                    '6 Months',
                   ],
                   onChanged: (v) =>
                       ref.read(_prepWindowProvider.notifier).state = v!,

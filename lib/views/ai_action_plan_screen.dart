@@ -14,6 +14,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../models/simulation_models.dart';
 import '../models/simulation_state.dart';
+import '../models/barangay_provider.dart';
 import 'app_shell.dart';
 
 // -----------------------------------------------------------
@@ -28,21 +29,7 @@ final exportLoadingProvider = StateProvider<bool>((ref) => false);
 
 const _kManilaCtr = LatLng(14.5928, 120.9762);
 
-// Priority action circles for the map
-final _actionCircles = [
-  // Critical priority — deep red
-  CircleMarker(point: const LatLng(14.6155, 120.9674), radius: 1600, color: const Color(0xAADC2626), borderColor: Colors.transparent, borderStrokeWidth: 0, useRadiusInMeter: true),
-  CircleMarker(point: const LatLng(14.6050, 120.9750), radius: 1200, color: const Color(0xAADC2626), borderColor: Colors.transparent, borderStrokeWidth: 0, useRadiusInMeter: true),
-  // High priority — orange
-  CircleMarker(point: const LatLng(14.5980, 121.0000), radius: 1800, color: const Color(0xAAF97316), borderColor: Colors.transparent, borderStrokeWidth: 0, useRadiusInMeter: true),
-  CircleMarker(point: const LatLng(14.6000, 120.9800), radius: 1400, color: const Color(0xAAF97316), borderColor: Colors.transparent, borderStrokeWidth: 0, useRadiusInMeter: true),
-  // Moderate priority — amber
-  CircleMarker(point: const LatLng(14.5853, 121.0050), radius: 1600, color: const Color(0xAAF59E0B), borderColor: Colors.transparent, borderStrokeWidth: 0, useRadiusInMeter: true),
-  CircleMarker(point: const LatLng(14.5920, 120.9900), radius: 1400, color: const Color(0xAAF59E0B), borderColor: Colors.transparent, borderStrokeWidth: 0, useRadiusInMeter: true),
-  // Low priority — green
-  CircleMarker(point: const LatLng(14.5660, 120.9863), radius: 2000, color: const Color(0xAA16A34A), borderColor: Colors.transparent, borderStrokeWidth: 0, useRadiusInMeter: true),
-  CircleMarker(point: const LatLng(14.5750, 121.0100), radius: 1500, color: const Color(0xAA16A34A), borderColor: Colors.transparent, borderStrokeWidth: 0, useRadiusInMeter: true),
-];
+
 
 // Evacuation center markers
 final _evacMarkers = [
@@ -64,12 +51,18 @@ final _pumpMarkers = [
 // AI Action Plan Content
 // -----------------------------------------------------------
 
-class AiActionPlanContent extends ConsumerWidget {
+class AiActionPlanContent extends ConsumerStatefulWidget {
   const AiActionPlanContent({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final result = ref.watch(simulationResultProvider);
+  ConsumerState<AiActionPlanContent> createState() => _AiActionPlanContentState();
+}
+
+class _AiActionPlanContentState extends ConsumerState<AiActionPlanContent> {
+  @override
+  Widget build(BuildContext context) {
+    final simResult = ref.watch(simulationResultProvider);
+    final barangaysAsync = ref.watch(barangayPolygonsProvider);
 
     return Column(
       children: [
@@ -78,8 +71,19 @@ class AiActionPlanContent extends ConsumerWidget {
           subtitle:
               'AI-generated, prioritized actions based on the simulation results',
           actions: [
+            OutlinedButton.icon(
+              onPressed: () {
+                ref.read(simulationRunStateProvider.notifier).state = SimulationRunState.idle;
+                ref.read(simulationResultProvider.notifier).state = null;
+                ref.read(simulationRunIdProvider.notifier).state = null;
+                ref.read(shellIndexProvider.notifier).state = 1;
+              },
+              icon: const Icon(Icons.refresh, size: 15),
+              label: const Text('New Simulation'),
+            ),
+            const SizedBox(width: 12),
             ElevatedButton.icon(
-              onPressed: result != null
+              onPressed: simResult != null
                   ? () => ref
                       .read(shellIndexProvider.notifier)
                       .state = 4
@@ -93,9 +97,9 @@ class AiActionPlanContent extends ConsumerWidget {
           ],
         ),
         Expanded(
-          child: result == null
+          child: simResult == null
               ? _EmptyState()
-              : _ActionPlanBody(result: result),
+              : _ActionPlanBody(simResult: simResult, barangaysAsync: barangaysAsync),
         ),
       ],
     );
@@ -151,8 +155,10 @@ class _EmptyState extends ConsumerWidget {
 // -----------------------------------------------------------
 
 class _ActionPlanBody extends ConsumerWidget {
-  final SimulationOutput result;
-  const _ActionPlanBody({required this.result});
+  final SimulationOutput simResult;
+  final AsyncValue<List<BarangayPolygon>> barangaysAsync;
+
+  const _ActionPlanBody({required this.simResult, required this.barangaysAsync});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -160,34 +166,141 @@ class _ActionPlanBody extends ConsumerWidget {
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          // Simulation Completed Banner
           _CompletedBanner(onViewResults: () {}),
           const SizedBox(height: 16),
-
-          // Map + Summary row
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Priority Action Map
               Expanded(
-                flex: 3,
-                child: _PriorityActionMap(result: result),
+                flex: 4,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFE5E7EB)),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: SizedBox(
+                      height: 450,
+                      child: _ActionPlanMap(
+                        simResult: simResult,
+                        barangaysAsync: barangaysAsync,
+                      ),
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(width: 16),
-              // Overall Plan Summary
               SizedBox(
                 width: 260,
-                child: _PlanSummaryCard(result: result),
+                child: _PlanSummaryCard(result: simResult),
               ),
             ],
           ),
-
           const SizedBox(height: 16),
-
           // AI Summary
-          _AiSummaryCard(result: result),
+          _AiSummaryCard(result: simResult),
         ],
       ),
+    );
+  }
+}
+
+class _ActionPlanMap extends StatelessWidget {
+  final SimulationOutput simResult;
+  final AsyncValue<List<BarangayPolygon>> barangaysAsync;
+
+  const _ActionPlanMap({
+    required this.simResult,
+    required this.barangaysAsync,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    Map<String, String>? riskMap = {};
+    for (final b in simResult.impactedBarangays) {
+      riskMap[b.barangayName] = b.zoneStatus.name;
+    }
+
+    return Stack(
+      children: [
+        FlutterMap(
+          options: const MapOptions(
+            initialCenter: _kManilaCtr,
+            initialZoom: 12.5,
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              userAgentPackageName: 'com.acta.app',
+            ),
+            barangaysAsync.when(
+              data: (barangays) => PolygonLayer(
+                polygons: buildBarangayMapPolygons(barangays, riskMap: riskMap),
+              ),
+              loading: () => const PolygonLayer(polygons: <Polygon>[]),
+              error: (_, __) => const PolygonLayer(polygons: <Polygon>[]),
+            ),
+            MarkerLayer(
+              markers: [
+                ..._evacMarkers.map((ll) => Marker(
+                  point: ll,
+                  child: const Icon(Icons.home, size: 20, color: Color(0xFF6D28D9)),
+                )),
+                ..._pumpMarkers.map((ll) => Marker(
+                  point: ll,
+                  child: const Icon(Icons.water_drop, size: 20, color: Color(0xFF0EA5E9)),
+                )),
+              ],
+            ),
+          ],
+        ),
+        // Legend
+        Positioned(
+          bottom: 12,
+          left: 12,
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.95),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Action Priority',
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF374151))),
+                const SizedBox(height: 5),
+                _legItem(const Color(0xFFDC2626), 'Critical Priority'),
+                _legItem(const Color(0xFFF97316), 'High Priority'),
+                _legItem(const Color(0xFFF59E0B), 'Moderate Priority'),
+                _legItem(const Color(0xFF16A34A), 'Low Priority'),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _legItem(Color c, String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 3),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Container(
+            width: 10,
+            height: 10,
+            decoration:
+                BoxDecoration(color: c, borderRadius: BorderRadius.circular(2))),
+        const SizedBox(width: 5),
+        Text(label, style: const TextStyle(fontSize: 10, color: Color(0xFF374151))),
+      ]),
     );
   }
 }
@@ -248,209 +361,6 @@ class _CompletedBanner extends StatelessWidget {
   }
 }
 
-// -----------------------------------------------------------
-// Priority Action Map
-// -----------------------------------------------------------
-
-class _PriorityActionMap extends StatefulWidget {
-  final SimulationOutput result;
-  const _PriorityActionMap({required this.result});
-
-  @override
-  State<_PriorityActionMap> createState() => _PriorityActionMapState();
-}
-
-class _PriorityActionMapState extends State<_PriorityActionMap> {
-  final Map<String, bool> _layers = {
-    'Barangay Boundary': true,
-    'Major Roads': true,
-    'Rivers / Esteros': true,
-    'Evacuation Centers': true,
-    'Pumping Stations': true,
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: _cardDecoration,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 14, 16, 4),
-            child: Text('Priority Action Map',
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF111827))),
-          ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 0, 16, 10),
-            child: Text(
-              'AI-prioritized action areas based on flood impact and risk.',
-              style: TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
-            ),
-          ),
-          SizedBox(
-            height: 380,
-            child: Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(10),
-                    bottomRight: Radius.circular(10),
-                  ),
-                  child: FlutterMap(
-                    options: const MapOptions(
-                      initialCenter: _kManilaCtr,
-                      initialZoom: 12,
-                    ),
-                    children: [
-                      TileLayer(
-                        urlTemplate:
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.acta.app',
-                      ),
-                      CircleLayer(circles: _actionCircles),
-                      if (_layers['Evacuation Centers']!)
-                        MarkerLayer(
-                          markers: _evacMarkers
-                              .map((ll) => Marker(
-                                    point: ll,
-                                    width: 24,
-                                    height: 24,
-                                    child: Container(
-                                      decoration: const BoxDecoration(
-                                          color: Color(0xFF6D28D9),
-                                          shape: BoxShape.circle),
-                                      child: const Icon(Icons.home,
-                                          size: 13, color: Colors.white),
-                                    ),
-                                  ))
-                              .toList(),
-                        ),
-                      if (_layers['Pumping Stations']!)
-                        MarkerLayer(
-                          markers: _pumpMarkers
-                              .map((ll) => Marker(
-                                    point: ll,
-                                    width: 24,
-                                    height: 24,
-                                    child: Container(
-                                      decoration: const BoxDecoration(
-                                          color: Color(0xFF0EA5E9),
-                                          shape: BoxShape.circle),
-                                      child: const Icon(Icons.water_drop,
-                                          size: 12, color: Colors.white),
-                                    ),
-                                  ))
-                              .toList(),
-                        ),
-                    ],
-                  ),
-                ),
-                // Priority legend + layers panel
-                Positioned(
-                  top: 10,
-                  left: 10,
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.95),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFE5E7EB)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('Action Priority',
-                            style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF374151))),
-                        const SizedBox(height: 5),
-                        _legItem(const Color(0xFFDC2626), 'Critical Priority'),
-                        _legItem(const Color(0xFFF97316), 'High Priority'),
-                        _legItem(const Color(0xFFF59E0B), 'Moderate Priority'),
-                        _legItem(const Color(0xFF16A34A), 'Low Priority'),
-                        const SizedBox(height: 8),
-                        const Text('Map Layers',
-                            style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF374151))),
-                        const SizedBox(height: 4),
-                        ..._layers.keys.map((k) => _layerRow(k)),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, size: 12, color: Color(0xFF9CA3AF)),
-                SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    'Red areas indicate barangays that require immediate attention and resource deployment.',
-                    style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _legItem(Color c, String label) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 3),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Container(
-            width: 10,
-            height: 10,
-            decoration:
-                BoxDecoration(color: c, borderRadius: BorderRadius.circular(2))),
-        const SizedBox(width: 5),
-        Text(label, style: const TextStyle(fontSize: 10, color: Color(0xFF374151))),
-      ]),
-    );
-  }
-
-  Widget _layerRow(String key) {
-    return InkWell(
-      onTap: () => setState(() => _layers[key] = !_layers[key]!),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 16,
-              height: 16,
-              child: Checkbox(
-                value: _layers[key],
-                onChanged: (v) => setState(() => _layers[key] = v ?? false),
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-            ),
-            const SizedBox(width: 5),
-            Text(key, style: const TextStyle(fontSize: 10, color: Color(0xFF374151))),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// -----------------------------------------------------------
 // Plan Summary Card
 // -----------------------------------------------------------
 

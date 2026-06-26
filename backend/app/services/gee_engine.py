@@ -25,6 +25,13 @@ from pathlib import Path
 from typing import Any
 
 from app.core.config import settings
+from app.core.pagasa_constants import (
+    rainfall_risk_factor,
+    wind_risk_factor,
+    classify_wind,
+    classify_rainfall,
+    WIND_LABELS,
+)
 
 logger = logging.getLogger("acta.gee_engine")
 
@@ -288,22 +295,24 @@ async def _gee_risk_analysis(
         # No SAR data available — use zero baseline.
         flood_frequency = ee.Image.constant(0).clip(manila_roi)
 
-    # 4. Composite Risk Score Raster
-    # Precipitation runoff factor (normalized against max scenario of 500mm).
-    precip_normalized = min(precipitation_mm / 500.0, 1.0)
+    # 4. Composite Risk Score Raster (PAGASA-calibrated)
+    # Use PAGASA rainfall risk factor instead of arbitrary normalization.
+    precip_risk = rainfall_risk_factor(precipitation_mm)
     runoff_coeff = RUNOFF_COEFFICIENTS["default"]
     water_accumulation = ee.Image.constant(
-        precip_normalized * runoff_coeff
+        precip_risk * runoff_coeff
     ).clip(manila_roi)
 
-    # Wind amplification factor: high winds drive lateral rain penetration.
-    wind_amplifier = min(wind_speed_kph / 250.0, 1.0) * 0.15
+    # Wind risk factor: PAGASA-calibrated continuous 0-1 scale.
+    wind_factor_val = wind_risk_factor(wind_speed_kph)
+    wind_layer = ee.Image.constant(wind_factor_val).clip(manila_roi)
 
-    # Composite Risk = Water Accumulation (0.45) + Elevation Factor (0.35) + Historical (0.20)
+    # Composite Risk = Water (0.40) + Elevation (0.25) + Historical (0.15) + Wind (0.20)
     composite_risk = (
-        water_accumulation.multiply(0.45 + wind_amplifier)
-        .add(elevation_factor.multiply(0.35))
-        .add(flood_frequency.multiply(0.20))
+        water_accumulation.multiply(0.40)
+        .add(elevation_factor.multiply(0.25))
+        .add(flood_frequency.multiply(0.15))
+        .add(wind_layer.multiply(0.20))
         .clamp(0, 1)
     )
 
@@ -454,10 +463,10 @@ def _analytical_risk_model(
         precipitation_mm, wind_speed_kph,
     )
 
-    # Normalize inputs.
-    precip_factor = min(precipitation_mm / 500.0, 1.0)
-    wind_factor = min(wind_speed_kph / 250.0, 1.0)
-    runoff = precip_factor * RUNOFF_COEFFICIENTS["default"]
+    # PAGASA-calibrated risk factors.
+    precip_risk = rainfall_risk_factor(precipitation_mm)
+    wind_risk = wind_risk_factor(wind_speed_kph)
+    runoff = precip_risk * RUNOFF_COEFFICIENTS["default"]
 
     # Known historically vulnerable areas in Manila (centroid lng/lat).
     # These areas experienced severe flooding during Ondoy, Habagat, Ulysses.
@@ -519,14 +528,16 @@ def _analytical_risk_model(
         # Closer to historical flood areas = higher frequency penalty.
         historical_freq = max(0, 1.0 - min_distance * 50) * 0.9
 
-        # Water accumulation: precipitation runoff adjusted by wind.
-        water_score = runoff * (1.0 + wind_factor * 0.15)
+        # Water accumulation: precipitation runoff.
+        water_score = runoff
 
-        # Composite risk (same weights as GEE model).
+        # Composite risk (PAGASA-aligned weights matching GEE model).
+        # Water (0.40) + Elevation (0.25) + Historical (0.15) + Wind (0.20)
         total_risk = (
-            water_score * 0.45
-            + elevation_factor * 0.35
-            + historical_freq * 0.20
+            water_score * 0.40
+            + elevation_factor * 0.25
+            + historical_freq * 0.15
+            + wind_risk * 0.20
         )
         total_risk = max(0.0, min(1.0, total_risk))
 

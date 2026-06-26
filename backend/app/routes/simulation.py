@@ -170,10 +170,10 @@ async def get_simulation_results(run_id: str) -> SimulationOutput:
                 detail=f"Simulation is not complete. Current status: {run_record['status']}"
             )
 
-        # Fetch risk scores (only returning top impacted for the output model to keep it light)
+        # Fetch risk scores (returning all impacted barangays for full map coverage)
         scores_res = client.table("barangay_risk_scores").select(
             "barangay_id, barangays(barangay_name, district), water_accumulation_score, elevation_factor, historical_frequency, total_risk_score, risk_tier"
-        ).eq("run_id", run_id).order("total_risk_score", desc=True).limit(50).execute()
+        ).eq("run_id", run_id).order("total_risk_score", desc=True).limit(1000).execute()
         
         impacted = []
         for s in scores_res.data:
