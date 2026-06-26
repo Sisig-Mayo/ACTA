@@ -1,0 +1,38 @@
+site_name: Acta Documentation
+site_description: Technical documentation for the Acta Flutter application.
+site_author: Acta contributors
+
+theme:
+  name: readthedocs
+  highlightjs: true
+  hljs_languages:
+    - dart
+    - yaml
+
+extra_css:
+  - styles/acta.css
+
+nav:
+  - About Acta: index.md
+  - Product:
+      - Features And Operator Value: product/features.md
+  - Getting Started:
+      - Installation: getting-started/installation.md
+      - Running Acta: getting-started/running-acta.md
+  - Development:
+      - System Architecture: development/architecture.md
+      - Development Workflow: development/workflow.md
+  - Reference:
+      - Project Structure: reference/project-structure.md
+      - Configuration: reference/configuration.md
+      - API Reference: reference/api.md
+      - Data And Database: reference/data-and-database.md
+      - Data Pipeline: reference/data-pipeline.md
+      - LLM Pipeline: reference/llm-pipeline.md
+  - Operations:
+      - Troubleshooting: operations/troubleshooting.md
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true

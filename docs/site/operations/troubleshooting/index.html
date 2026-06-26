@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="Acta contributors" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Troubleshooting - Acta Documentation</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../styles/acta.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Troubleshooting";
+        var mkdocs_page_input_path = "operations/troubleshooting.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/dart.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Acta Documentation
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">About Acta</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Product</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../product/features/">Features And Operator Value</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Getting Started</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../getting-started/installation/">Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../getting-started/running-acta/">Running Acta</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Development</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../development/architecture/">System Architecture</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../development/workflow/">Development Workflow</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/project-structure/">Project Structure</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/configuration/">Configuration</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/api/">API Reference</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/data-and-database/">Data And Database</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/data-pipeline/">Data Pipeline</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/llm-pipeline/">LLM Pipeline</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Operations</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Troubleshooting</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#backend-does-not-start">Backend Does Not Start</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#health-works-but-api-calls-fail">/health Works But API Calls Fail</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#auth-fails">Auth Fails</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#simulation-never-completes">Simulation Never Completes</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#results-return-400">Results Return 400</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#barangay-map-is-empty">Barangay Map Is Empty</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#frontend-cannot-reach-backend">Frontend Cannot Reach Backend</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#gemini-output-is-missing">Gemini Output Is Missing</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#data-pipeline-upload-fails">Data Pipeline Upload Fails</a>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Acta Documentation</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Operations</li>
+      <li class="breadcrumb-item active">Troubleshooting</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h1>
+<p>This page lists common local setup problems and the first checks to make.</p>
+<h2 id="backend-does-not-start">Backend Does Not Start<a class="headerlink" href="#backend-does-not-start" title="Permanent link">&para;</a></h2>
+<p>Check that the backend virtual environment is active and dependencies are
+installed:</p>
+<pre><code class="language-sh">cd backend
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+</code></pre>
+<p>If settings fail to load, confirm <code>.env</code> exists at the repository root and uses
+the variable names from <code>.env.example</code>.</p>
+<h2 id="health-works-but-api-calls-fail"><code>/health</code> Works But API Calls Fail<a class="headerlink" href="#health-works-but-api-calls-fail" title="Permanent link">&para;</a></h2>
+<p>Check Supabase configuration:</p>
+<ul>
+<li><code>SUPABASE_URL</code> is the project URL.</li>
+<li><code>SUPABASE_SERVICE_ROLE_KEY</code> is a service role key, not an anon key.</li>
+<li><code>SUPABASE_DATABASE_URL</code> is reachable from your machine.</li>
+<li>Database migrations have been applied.</li>
+</ul>
+<h2 id="auth-fails">Auth Fails<a class="headerlink" href="#auth-fails" title="Permanent link">&para;</a></h2>
+<p>Registration and login proxy to Supabase Auth. Check:</p>
+<ul>
+<li>Supabase project URL and service role key.</li>
+<li>Network access to Supabase.</li>
+<li>The <code>profiles</code> table and related auth/profile trigger or fallback insert path.</li>
+<li>Password rules configured in Supabase.</li>
+</ul>
+<h2 id="simulation-never-completes">Simulation Never Completes<a class="headerlink" href="#simulation-never-completes" title="Permanent link">&para;</a></h2>
+<p>Check backend logs for the background pipeline. Common causes:</p>
+<ul>
+<li>Missing Supabase credentials.</li>
+<li>Missing required database tables or columns.</li>
+<li>Missing barangay seed data.</li>
+<li>Google Earth Engine credentials not configured.</li>
+<li>Gemini error, though this should fall back to template output.</li>
+</ul>
+<p>Use:</p>
+<pre><code class="language-text">GET /api/v1/simulation/status/{run_id}
+</code></pre>
+<p>to inspect <code>status</code>, <code>progress_pct</code>, and <code>error_message</code>.</p>
+<h2 id="results-return-400">Results Return <code>400</code><a class="headerlink" href="#results-return-400" title="Permanent link">&para;</a></h2>
+<p><code>GET /api/v1/simulation/results/{run_id}</code> only works after the run status is
+<code>COMPLETED</code>. Poll the status endpoint first.</p>
+<h2 id="barangay-map-is-empty">Barangay Map Is Empty<a class="headerlink" href="#barangay-map-is-empty" title="Permanent link">&para;</a></h2>
+<p>Check:</p>
+<ul>
+<li>Barangay GeoJSON seed data has been imported.</li>
+<li>The <code>get_barangays_geojson</code> RPC migration has been applied.</li>
+<li><code>GET /api/v1/barangays/geojson</code> returns a GeoJSON FeatureCollection.</li>
+<li>Browser requests are reaching the backend at <code>http://localhost:8000</code>.</li>
+</ul>
+<h2 id="frontend-cannot-reach-backend">Frontend Cannot Reach Backend<a class="headerlink" href="#frontend-cannot-reach-backend" title="Permanent link">&para;</a></h2>
+<p>The Flutter code currently uses <code>http://localhost:8000</code> in multiple files. That
+works for Chrome and desktop apps running on the same machine as the backend.</p>
+<p>For Android emulators, iOS simulators, physical devices, or deployed builds,
+configure a reachable backend URL for that target.</p>
+<h2 id="gemini-output-is-missing">Gemini Output Is Missing<a class="headerlink" href="#gemini-output-is-missing" title="Permanent link">&para;</a></h2>
+<p>If <code>GEMINI_API_KEY</code> is empty or Gemini returns an error, ACTA uses fallback
+template action-plan output. Check the <code>generated_by</code> field through:</p>
+<pre><code class="language-text">GET /api/v1/simulation/llm-context/{run_id}
+</code></pre>
+<h2 id="data-pipeline-upload-fails">Data Pipeline Upload Fails<a class="headerlink" href="#data-pipeline-upload-fails" title="Permanent link">&para;</a></h2>
+<p>Check:</p>
+<ul>
+<li><code>SUPABASE_URL</code> and <code>SUPABASE_SERVICE_ROLE_KEY</code>.</li>
+<li>Supabase Storage bucket <code>raw-hazard-data</code> exists.</li>
+<li>The <code>hazard_events</code> table exists.</li>
+<li>Live mode is being used only when credentials are configured.</li>
+</ul>
+<p>Use dry-run mode first:</p>
+<pre><code class="language-sh">cd data_pipeline
+python ingestor.py --dry-run
+</code></pre>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../../reference/llm-pipeline/" class="btn btn-neutral float-left" title="LLM Pipeline"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../../reference/llm-pipeline/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
