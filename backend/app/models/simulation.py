@@ -152,6 +152,13 @@ class BarangayImpact(BaseModel):
     coverage_pct: float = Field(ge=0, le=100)
     centroid: list[float] = Field(description="[lng, lat] centroid.")
 
+    @field_validator("zone_status", mode="before")
+    @classmethod
+    def validate_zone_status(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.lower()
+        return v
+
 
 class TaskItem(BaseModel):
     """A single time-decayed action item."""
@@ -183,3 +190,10 @@ class SimulationOutput(BaseModel):
         default_factory=dict,
         description="Additional diagnostic metadata.",
     )
+
+    @field_validator("severity_tier", mode="before")
+    @classmethod
+    def validate_severity_tier(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.lower()
+        return v
