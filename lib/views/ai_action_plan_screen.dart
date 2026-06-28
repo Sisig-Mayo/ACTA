@@ -162,42 +162,66 @@ class _ActionPlanBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
           _CompletedBanner(onViewResults: () {}),
           const SizedBox(height: 16),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 4,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFE5E7EB)),
+          if (isMobile) ...[
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(
+                  height: 350,
+                  child: _ActionPlanMap(
+                    simResult: simResult,
+                    barangaysAsync: barangaysAsync,
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: SizedBox(
-                      height: 450,
-                      child: _ActionPlanMap(
-                        simResult: simResult,
-                        barangaysAsync: barangaysAsync,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _PlanSummaryCard(result: simResult),
+          ] else ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 4,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: SizedBox(
+                        height: 450,
+                        child: _ActionPlanMap(
+                          simResult: simResult,
+                          barangaysAsync: barangaysAsync,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              SizedBox(
-                width: 260,
-                child: _PlanSummaryCard(result: simResult),
-              ),
-            ],
-          ),
+                const SizedBox(width: 16),
+                SizedBox(
+                  width: 260,
+                  child: _PlanSummaryCard(result: simResult),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 16),
           // AI Summary
           _AiSummaryCard(result: simResult),
@@ -321,6 +345,7 @@ class _CompletedBanner extends StatelessWidget {
         'Manila Flash Flood Simulation | ${months[now.month - 1]} ${now.day}, ${now.year}  '
         '${now.hour > 12 ? now.hour - 12 : now.hour}:${now.minute.toString().padLeft(2, '0')} '
         '${now.hour >= 12 ? 'PM' : 'AM'}';
+    final isMobile = MediaQuery.of(context).size.width < 768;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -329,34 +354,77 @@ class _CompletedBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFBBF7D0)),
       ),
-      child: Row(
-        children: [
-          const Icon(Icons.check_circle, color: Color(0xFF16A34A), size: 20),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Simulation Completed',
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF15803D))),
-              Text(label,
-                  style: const TextStyle(
-                      fontSize: 11, color: Color(0xFF4ADE80))),
-            ],
-          ),
-          const Spacer(),
-          TextButton.icon(
-            onPressed: onViewResults,
-            icon: const Icon(Icons.open_in_new,
-                size: 13, color: Color(0xFF16A34A)),
-            label: const Text('View Simulation Results',
-                style: TextStyle(
-                    color: Color(0xFF16A34A), fontSize: 12)),
-          ),
-        ],
-      ),
+      child: isMobile
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Color(0xFF16A34A), size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Simulation Completed',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF15803D))),
+                          Text(label,
+                              style: const TextStyle(
+                                  fontSize: 11, color: Color(0xFF4ADE80))),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    onPressed: onViewResults,
+                    icon: const Icon(Icons.open_in_new,
+                        size: 13, color: Color(0xFF16A34A)),
+                    label: const Text('View Simulation Results',
+                        style: TextStyle(
+                            color: Color(0xFF16A34A), fontSize: 12)),
+                    style: TextButton.styleFrom(
+                      alignment: Alignment.centerLeft,
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                const Icon(Icons.check_circle, color: Color(0xFF16A34A), size: 20),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Simulation Completed',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF15803D))),
+                    Text(label,
+                        style: const TextStyle(
+                            fontSize: 11, color: Color(0xFF4ADE80))),
+                  ],
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: onViewResults,
+                  icon: const Icon(Icons.open_in_new,
+                      size: 13, color: Color(0xFF16A34A)),
+                  label: const Text('View Simulation Results',
+                      style: TextStyle(
+                          color: Color(0xFF16A34A), fontSize: 12)),
+                ),
+              ],
+            ),
     );
   }
 }
@@ -492,6 +560,7 @@ class _AiSummaryCard extends StatelessWidget {
     final criticalCount = result.taskList
         .where((t) => t.priority == 'CRITICAL' || t.priority == 'HIGH')
         .length;
+    final isMobile = MediaQuery.of(context).size.width < 768;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -523,64 +592,112 @@ class _AiSummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: 14),
 
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Narrative text
-              Expanded(
-                flex: 2,
-                child: Text(
-                  result.explainabilityCard.summary.isNotEmpty
-                      ? result.explainabilityCard.summary
-                      : 'Based on the simulation, ${result.impactedBarangays.length} barangays are at high to critical risk of flood impact. Immediate actions on evacuation, pumping operations, and traffic management will significantly reduce potential impact on the population.',
-                  style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF374151),
-                      height: 1.6),
+          if (isMobile) ...[
+            Text(
+              result.explainabilityCard.summary.isNotEmpty
+                  ? result.explainabilityCard.summary
+                  : 'Based on the simulation, ${result.impactedBarangays.length} barangays are at high to critical risk of flood impact. Immediate actions on evacuation, pumping operations, and traffic management will significantly reduce potential impact on the population.',
+              style: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF374151),
+                  height: 1.6),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              alignment: WrapAlignment.center,
+              children: [
+                _statChip(
+                  context,
+                  Icons.people_outline,
+                  '623,410',
+                  'Population\nat Risk',
+                  const Color(0xFFDC2626),
+                  const Color(0xFFFEF2F2),
                 ),
-              ),
-              const SizedBox(width: 20),
+                _statChip(
+                  context,
+                  Icons.location_city_outlined,
+                  '$criticalCount',
+                  'High/Critical\nBarangays',
+                  const Color(0xFFF59E0B),
+                  const Color(0xFFFFFBEB),
+                ),
+                _statChip(
+                  context,
+                  Icons.verified_outlined,
+                  '92%',
+                  'Impact\nReduction',
+                  const Color(0xFF16A34A),
+                  const Color(0xFFF0FDF4),
+                ),
+              ],
+            ),
+          ] else ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Narrative text
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    result.explainabilityCard.summary.isNotEmpty
+                        ? result.explainabilityCard.summary
+                        : 'Based on the simulation, ${result.impactedBarangays.length} barangays are at high to critical risk of flood impact. Immediate actions on evacuation, pumping operations, and traffic management will significantly reduce potential impact on the population.',
+                    style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF374151),
+                        height: 1.6),
+                  ),
+                ),
+                const SizedBox(width: 20),
 
-              // Stat chips
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _statChip(
-                    Icons.people_outline,
-                    '623,410',
-                    'Population at Risk',
-                    const Color(0xFFDC2626),
-                    const Color(0xFFFEF2F2),
-                  ),
-                  const SizedBox(width: 12),
-                  _statChip(
-                    Icons.location_city_outlined,
-                    '$criticalCount',
-                    'High/Critical\nBarangays',
-                    const Color(0xFFF59E0B),
-                    const Color(0xFFFFFBEB),
-                  ),
-                  const SizedBox(width: 12),
-                  _statChip(
-                    Icons.verified_outlined,
-                    '92%',
-                    'Potential Impact\nReduction',
-                    const Color(0xFF16A34A),
-                    const Color(0xFFF0FDF4),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                // Stat chips
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _statChip(
+                      context,
+                      Icons.people_outline,
+                      '623,410',
+                      'Population at Risk',
+                      const Color(0xFFDC2626),
+                      const Color(0xFFFEF2F2),
+                    ),
+                    const SizedBox(width: 12),
+                    _statChip(
+                      context,
+                      Icons.location_city_outlined,
+                      '$criticalCount',
+                      'High/Critical\nBarangays',
+                      const Color(0xFFF59E0B),
+                      const Color(0xFFFFFBEB),
+                    ),
+                    const SizedBox(width: 12),
+                    _statChip(
+                      context,
+                      Icons.verified_outlined,
+                      '92%',
+                      'Potential Impact\nReduction',
+                      const Color(0xFF16A34A),
+                      const Color(0xFFF0FDF4),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
 
   Widget _statChip(
-      IconData icon, String value, String label, Color color, Color bg) {
+      BuildContext context, IconData icon, String value, String label, Color color, Color bg) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 16, vertical: 12),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(10),
@@ -588,17 +705,17 @@ class _AiSummaryCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 24),
+          Icon(icon, color: color, size: isMobile ? 20 : 24),
           const SizedBox(height: 6),
           Text(value,
               style: TextStyle(
-                  fontSize: 20,
+                  fontSize: isMobile ? 16 : 20,
                   fontWeight: FontWeight.w800,
                   color: color)),
           const SizedBox(height: 2),
           Text(label,
               style: const TextStyle(
-                  fontSize: 10,
+                  fontSize: 9,
                   color: Color(0xFF6B7280)),
               textAlign: TextAlign.center),
         ],

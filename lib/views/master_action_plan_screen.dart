@@ -220,38 +220,53 @@ class _MasterPlanBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
+    final leftContent = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildExecutiveSummary(context, ref),
+        const SizedBox(height: 16),
+        _buildTaskLedger(context),
+      ],
+    );
+
+    final rightContent = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildApprovalPanel(context, ref),
+        const SizedBox(height: 16),
+        _buildPlanDetailsPanel(context, ref),
+      ],
+    );
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Left column: Document Content
-          Expanded(
-            flex: 3,
-            child: Column(
+      child: isMobile
+          ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildExecutiveSummary(context, ref),
+                leftContent,
                 const SizedBox(height: 16),
-                _buildTaskLedger(context),
+                rightContent,
               ],
-            ),
-          ),
-          const SizedBox(width: 16),
-          // Right column: Control Panel / Signatures
-          SizedBox(
-            width: 280,
-            child: Column(
+            )
+          : Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildApprovalPanel(context, ref),
-                const SizedBox(height: 16),
-                _buildPlanDetailsPanel(context, ref),
+                // Left column: Document Content
+                Expanded(
+                  flex: 3,
+                  child: leftContent,
+                ),
+                const SizedBox(width: 16),
+                // Right column: Control Panel / Signatures
+                SizedBox(
+                  width: 280,
+                  child: rightContent,
+                ),
               ],
             ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -362,6 +377,8 @@ class _MasterPlanBody extends ConsumerWidget {
 
   // --- Task Ledger Table Card ---
   Widget _buildTaskLedger(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: _cardDecoration,
@@ -387,40 +404,52 @@ class _MasterPlanBody extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Table(
-            columnWidths: const {
-              0: FlexColumnWidth(1.2), // Priority
-              1: FlexColumnWidth(1.5), // Category
-              2: FlexColumnWidth(4.5), // Action Details
-              3: FlexColumnWidth(1.2), // Deadline
-            },
-            border: const TableBorder(
-              horizontalInside: BorderSide(color: Color(0xFFF1F5F9), width: 1),
-            ),
-            children: [
-              // Header row
-              TableRow(
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF8FAFC),
-                ),
-                children: [
-                  _tableHeader('Priority'),
-                  _tableHeader('Category'),
-                  _tableHeader('Action Details'),
-                  _tableHeader('Deadline'),
-                ],
+
+          if (isMobile)
+            Column(
+              children: result.taskList
+                  .map((task) => _MobileTaskCard(
+                        task: task,
+                        formatCategory: _formatCategory,
+                        priorityBadgeWidget: _priorityBadge(task.priority),
+                      ))
+                  .toList(),
+            )
+          else
+            Table(
+              columnWidths: const {
+                0: FlexColumnWidth(1.2), // Priority
+                1: FlexColumnWidth(1.5), // Category
+                2: FlexColumnWidth(4.5), // Action Details
+                3: FlexColumnWidth(1.2), // Deadline
+              },
+              border: const TableBorder(
+                horizontalInside: BorderSide(color: Color(0xFFF1F5F9), width: 1),
               ),
-              // Data rows
-              ...result.taskList.map((task) => TableRow(
-                    children: [
-                      _priorityBadge(task.priority),
-                      _tableCell(_formatCategory(task.category)),
-                      _tableCell(task.action),
-                      _tableCell('T-${task.deadlineHours} hrs'),
-                    ],
-                  )),
-            ],
-          ),
+              children: [
+                // Header row
+                TableRow(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF8FAFC),
+                  ),
+                  children: [
+                    _tableHeader('Priority'),
+                    _tableHeader('Category'),
+                    _tableHeader('Action Details'),
+                    _tableHeader('Deadline'),
+                  ],
+                ),
+                // Data rows
+                ...result.taskList.map((task) => TableRow(
+                      children: [
+                        _priorityBadge(task.priority),
+                        _tableCell(_formatCategory(task.category)),
+                        _tableCell(task.action),
+                        _tableCell('T-${task.deadlineHours} hrs'),
+                      ],
+                    )),
+              ],
+            ),
         ],
       ),
     );
@@ -661,6 +690,72 @@ class _MasterPlanBody extends ConsumerWidget {
               fontSize: 11,
               fontWeight: FontWeight.w600,
               color: Color(0xFF334155),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// -----------------------------------------------------------
+// Mobile Task Card (replaces table rows on narrow screens)
+// -----------------------------------------------------------
+
+class _MobileTaskCard extends StatelessWidget {
+  final dynamic task;
+  final String Function(String) formatCategory;
+  final Widget priorityBadgeWidget;
+
+  const _MobileTaskCard({
+    required this.task,
+    required this.formatCategory,
+    required this.priorityBadgeWidget,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              priorityBadgeWidget,
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  formatCategory(task.category as String),
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF475569),
+                  ),
+                ),
+              ),
+              Text(
+                'T-${task.deadlineHours} hrs',
+                style: GoogleFonts.robotoMono(
+                  fontSize: 11,
+                  color: const Color(0xFF64748B),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Text(
+              task.action as String,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: const Color(0xFF334155),
+                height: 1.5,
+              ),
             ),
           ),
         ],
