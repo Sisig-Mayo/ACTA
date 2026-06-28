@@ -183,13 +183,51 @@ class _AuthGateState extends ConsumerState<_AuthGate> {
   @override
   Widget build(BuildContext context) {
     if (_checking) {
-      // Show a loading indicator while validating the session
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const _StartupLoadingScreen();
     }
     return const LoginScreen();
+  }
+}
+
+class _StartupLoadingScreen extends StatelessWidget {
+  const _StartupLoadingScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF12141A),
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              'lib/assets/logo-1.png',
+              height: 96,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(
+                  Icons.shield,
+                  color: Color(0xFF00BFA6),
+                  size: 96,
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Preparing ACTA...',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const CircularProgressIndicator(
+              color: Color(0xFF00BFA6),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
