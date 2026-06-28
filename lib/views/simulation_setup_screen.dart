@@ -159,6 +159,7 @@ class _SimulationSetupContentState
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
     return Column(
       children: [
         PageHeader(
@@ -197,15 +198,10 @@ class _SimulationSetupContentState
                 const SizedBox(height: 32),
 
                 // Footer buttons
-                Row(
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: _resetParameters,
-                      icon: const Icon(Icons.refresh, size: 15),
-                      label: const Text('Reset Parameters'),
-                    ),
-                    const Spacer(),
-                    ElevatedButton.icon(
+                if (isMobile) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
                       onPressed: _runSimulation,
                       icon: const Icon(Icons.play_arrow_rounded, size: 18),
                       label: const Text('Run Simulation'),
@@ -215,8 +211,38 @@ class _SimulationSetupContentState
                             horizontal: 24, vertical: 14),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _resetParameters,
+                      icon: const Icon(Icons.refresh, size: 15),
+                      label: const Text('Reset Parameters'),
+                    ),
+                  ),
+                ] else ...[
+                  Row(
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _resetParameters,
+                        icon: const Icon(Icons.refresh, size: 15),
+                        label: const Text('Reset Parameters'),
+                      ),
+                      const Spacer(),
+                      ElevatedButton.icon(
+                        onPressed: _runSimulation,
+                        icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                        label: const Text('Run Simulation'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF16A34A),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 14),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 16),
               ],
             ),
@@ -259,6 +285,24 @@ class _ProfileSelector extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(simProfileProvider);
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
+    if (isMobile) {
+      return Column(
+        children: _profiles.map((p) {
+          final isSelected = selected == p.value;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _ProfileCard(
+              profile: p,
+              isSelected: isSelected,
+              onTap: () =>
+                  ref.read(simProfileProvider.notifier).state = p.value,
+            ),
+          );
+        }).toList(),
+      );
+    }
 
     return Row(
       children: _profiles.map((p) {
@@ -379,6 +423,7 @@ class _ParametersForm extends ConsumerWidget {
     final pumpingStatus = ref.watch(_pumpingStatusProvider);
     final rescueAssets = ref.watch(_rescueAssetsProvider);
     var notesLength = ref.watch(_notesProvider).length;
+    final isMobile = MediaQuery.of(context).size.width < 768;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -390,95 +435,165 @@ class _ParametersForm extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row 1: Rainfall | Wind
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _paramField(
-                  label: '24h Rainfall (mm)',
-                  hint: '120',
-                  helper: 'GREEN: <180 | YELLOW: <360 | ORANGE: <720 | RED: 720+',
-                  controller: rainfallCtrl,
-                  suffix: 'mm',
-                  isNumeric: true,
+          // Row 1: Rainfall | Wind (stacked on mobile)
+          if (isMobile) ...[
+            _paramField(
+              label: '24h Rainfall (mm)',
+              hint: '120',
+              helper: 'GREEN: <180 | YELLOW: <360 | ORANGE: <720 | RED: 720+',
+              controller: rainfallCtrl,
+              suffix: 'mm',
+              isNumeric: true,
+            ),
+            const SizedBox(height: 16),
+            _paramField(
+              label: 'Wind Speed (km/h)',
+              hint: '65',
+              helper: 'TD: ≤61 | TS: 62-88 | TY: 118-184 | STY: ≥185',
+              controller: windCtrl,
+              suffix: 'km/h',
+              isNumeric: true,
+            ),
+          ] else ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _paramField(
+                    label: '24h Rainfall (mm)',
+                    hint: '120',
+                    helper: 'GREEN: <180 | YELLOW: <360 | ORANGE: <720 | RED: 720+',
+                    controller: rainfallCtrl,
+                    suffix: 'mm',
+                    isNumeric: true,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _paramField(
-                  label: 'Wind Speed (km/h)',
-                  hint: '65',
-                  helper: 'TD: ≤61 | TS: 62-88 | TY: 118-184 | STY: ≥185',
-                  controller: windCtrl,
-                  suffix: 'km/h',
-                  isNumeric: true,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _paramField(
+                    label: 'Wind Speed (km/h)',
+                    hint: '65',
+                    helper: 'TD: ≤61 | TS: 62-88 | TY: 118-184 | STY: ≥185',
+                    controller: windCtrl,
+                    suffix: 'km/h',
+                    isNumeric: true,
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
 
           const SizedBox(height: 20),
 
-          // Row 2: Prep Window | Pumping | Rescue
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _paramDropdown(
-                  label: 'Preparation Window',
-                  helper: 'Time available before impact',
-                  value: prepWindow,
-                  items: const [
-                    '6 Hours',
-                    '12 Hours',
-                    '24 Hours',
-                    '48 Hours',
-                    '1 Week',
-                    '2 Weeks',
-                    '1 Month',
-                    '3 Months',
-                    '6 Months',
-                  ],
-                  onChanged: (v) =>
-                      ref.read(_prepWindowProvider.notifier).state = v!,
+          // Row 2: Prep Window | Pumping | Rescue (stacked on mobile)
+          if (isMobile) ...[
+            _paramDropdown(
+              label: 'Preparation Window',
+              helper: 'Time available before impact',
+              value: prepWindow,
+              items: const [
+                '6 Hours',
+                '12 Hours',
+                '24 Hours',
+                '48 Hours',
+                '1 Week',
+                '2 Weeks',
+                '1 Month',
+                '3 Months',
+                '6 Months',
+              ],
+              onChanged: (v) =>
+                  ref.read(_prepWindowProvider.notifier).state = v!,
+            ),
+            const SizedBox(height: 16),
+            _paramDropdown(
+              label: 'Pumping Station Status',
+              helper: 'Select current operational status',
+              value: pumpingStatus,
+              items: const [
+                'All Online',
+                '1 Offline',
+                '2 Offline',
+                '3 Offline',
+                '4+ Offline',
+              ],
+              onChanged: (v) =>
+                  ref.read(_pumpingStatusProvider.notifier).state = v!,
+            ),
+            const SizedBox(height: 16),
+            _paramDropdown(
+              label: 'Rescue Asset Availability',
+              helper: 'Select available rescue assets',
+              value: rescueAssets,
+              items: const [
+                '4 Boats Available',
+                '8 Boats Available',
+                '12 Boats Available',
+                '16+ Boats Available',
+              ],
+              onChanged: (v) =>
+                  ref.read(_rescueAssetsProvider.notifier).state = v!,
+            ),
+          ] else ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _paramDropdown(
+                    label: 'Preparation Window',
+                    helper: 'Time available before impact',
+                    value: prepWindow,
+                    items: const [
+                      '6 Hours',
+                      '12 Hours',
+                      '24 Hours',
+                      '48 Hours',
+                      '1 Week',
+                      '2 Weeks',
+                      '1 Month',
+                      '3 Months',
+                      '6 Months',
+                    ],
+                    onChanged: (v) =>
+                        ref.read(_prepWindowProvider.notifier).state = v!,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _paramDropdown(
-                  label: 'Pumping Station Status',
-                  helper: 'Select current operational status',
-                  value: pumpingStatus,
-                  items: const [
-                    'All Online',
-                    '1 Offline',
-                    '2 Offline',
-                    '3 Offline',
-                    '4+ Offline',
-                  ],
-                  onChanged: (v) =>
-                      ref.read(_pumpingStatusProvider.notifier).state = v!,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _paramDropdown(
+                    label: 'Pumping Station Status',
+                    helper: 'Select current operational status',
+                    value: pumpingStatus,
+                    items: const [
+                      'All Online',
+                      '1 Offline',
+                      '2 Offline',
+                      '3 Offline',
+                      '4+ Offline',
+                    ],
+                    onChanged: (v) =>
+                        ref.read(_pumpingStatusProvider.notifier).state = v!,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _paramDropdown(
-                  label: 'Rescue Asset Availability',
-                  helper: 'Select available rescue assets',
-                  value: rescueAssets,
-                  items: const [
-                    '4 Boats Available',
-                    '8 Boats Available',
-                    '12 Boats Available',
-                    '16+ Boats Available',
-                  ],
-                  onChanged: (v) =>
-                      ref.read(_rescueAssetsProvider.notifier).state = v!,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _paramDropdown(
+                    label: 'Rescue Asset Availability',
+                    helper: 'Select available rescue assets',
+                    value: rescueAssets,
+                    items: const [
+                      '4 Boats Available',
+                      '8 Boats Available',
+                      '12 Boats Available',
+                      '16+ Boats Available',
+                    ],
+                    onChanged: (v) =>
+                        ref.read(_rescueAssetsProvider.notifier).state = v!,
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
 
           const SizedBox(height: 20),
 
