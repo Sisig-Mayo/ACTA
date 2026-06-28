@@ -1,11 +1,11 @@
 {
-    "name": "acta",
-    "short_name": "acta",
+    "name": "ACTA — Adaptive Crisis & Threat Assessment",
+    "short_name": "ACTA",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0B1929",
+    "theme_color": "#13587A",
+    "description": "AI-powered flood simulation and adaptive action planning system for Metro Manila.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
