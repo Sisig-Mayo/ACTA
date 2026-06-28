@@ -158,6 +158,7 @@ class _RunSimulationContentState
     final stepIndex = _progressToStep(progressPct);
     final barangaysAsync = ref.watch(barangayPolygonsProvider);
     final simResult = ref.watch(simulationResultProvider);
+    final isMobile = MediaQuery.of(context).size.width < 768;
 
     // Auto-navigate once complete
     if (runState == SimulationRunState.completed) {
@@ -178,37 +179,51 @@ class _RunSimulationContentState
                 // Stepper
                 _StepperBar(currentStep: 1),
                 const SizedBox(height: 20),
-
-                // Main content: map + right panels
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Map
-                    Expanded(
-                      flex: 3,
-                      child: _MapCard(
-                        progressPct: progressPct,
-                        barangaysAsync: barangaysAsync,
-                        simResult: simResult,
+                // Main content: map + right panels (stacked on mobile)
+                if (isMobile) ...[
+                  _MapCard(
+                    progressPct: progressPct,
+                    barangaysAsync: barangaysAsync,
+                    simResult: simResult,
+                  ),
+                  const SizedBox(height: 16),
+                  _SimSummaryCard(snapshot: snapshot),
+                  const SizedBox(height: 12),
+                  _ModelProgressCard(
+                    stepIndex: stepIndex,
+                    progressPct: progressPct,
+                  ),
+                ] else ...[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Map
+                      Expanded(
+                        flex: 3,
+                        child: _MapCard(
+                          progressPct: progressPct,
+                          barangaysAsync: barangaysAsync,
+                          simResult: simResult,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    // Right panels
-                    SizedBox(
-                      width: 260,
-                      child: Column(
-                        children: [
-                          _SimSummaryCard(snapshot: snapshot),
-                          const SizedBox(height: 12),
-                          _ModelProgressCard(
-                            stepIndex: stepIndex,
-                            progressPct: progressPct,
-                          ),
-                        ],
+                      const SizedBox(width: 16),
+                      // Right panels
+                      SizedBox(
+                        width: 260,
+                        child: Column(
+                          children: [
+                            _SimSummaryCard(snapshot: snapshot),
+                            const SizedBox(height: 12),
+                            _ModelProgressCard(
+                              stepIndex: stepIndex,
+                              progressPct: progressPct,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
 
                 const SizedBox(height: 16),
 
@@ -268,6 +283,99 @@ class _StepperBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
+    if (isMobile) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: _steps.asMap().entries.map((e) {
+                final i = e.key;
+                final isDone = i < currentStep;
+                final isActive = i == currentStep;
+
+                Widget badge;
+                if (isDone) {
+                  badge = Container(
+                    width: 24,
+                    height: 24,
+                    decoration: const BoxDecoration(
+                        color: Color(0xFF16A34A), shape: BoxShape.circle),
+                    child: const Icon(Icons.check, color: Colors.white, size: 12),
+                  );
+                } else if (isActive) {
+                  badge = Container(
+                    width: 24,
+                    height: 24,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF16A34A),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text('${i + 1}',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700)),
+                    ),
+                  );
+                } else {
+                  badge = Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFFD1D5DB)),
+                    ),
+                    child: Center(
+                      child: Text('${i + 1}',
+                          style: const TextStyle(
+                              color: Color(0xFF9CA3AF),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700)),
+                    ),
+                  );
+                }
+
+                return Expanded(
+                  child: Row(
+                    children: [
+                      badge,
+                      if (i < _steps.length - 1)
+                        Expanded(
+                          child: Container(
+                            height: 2,
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            color: isDone ? const Color(0xFF16A34A) : const Color(0xFFE5E7EB),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Step ${currentStep + 1} of 4: ${_steps[currentStep].$1} — ${_steps[currentStep].$2}',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF111827),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(

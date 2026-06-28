@@ -3,6 +3,9 @@
 > An AI-powered disaster preparedness simulation platform generating time-decayed, spatially-aware action plans for Manila LGU operators.
 
 ---
+### 🌐 Live Deployment
+The platform is fully deployed and available for use here:
+👉 **[Launch ACTA Simulation Engine](https://sisig-mayo.github.io/ACTA/)**
 
 ## Architecture Overview
 

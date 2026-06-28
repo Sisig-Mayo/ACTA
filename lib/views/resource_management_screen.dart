@@ -442,6 +442,7 @@ class _AllResourcesCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final search = ref.watch(_searchProvider).toLowerCase();
+    final isMobile = MediaQuery.of(context).size.width < 768;
 
     final filtered = _resources.where((r) {
       if (search.isEmpty) return true;
@@ -456,81 +457,121 @@ class _AllResourcesCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header row
+          // Header row (stacks on mobile)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-            child: Row(
-              children: [
-                const Text('All Resources',
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF111827))),
-                const Spacer(),
-                SizedBox(
-                  width: 220,
-                  child: TextField(
-                    onChanged: (v) =>
-                        ref.read(_searchProvider.notifier).state = v,
-                    decoration: const InputDecoration(
-                      hintText: 'Search resources...',
-                      prefixIcon: Icon(Icons.search,
-                          size: 16, color: Color(0xFF9CA3AF)),
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    ),
-                    style: const TextStyle(fontSize: 13),
+            padding: const EdgeInsets.all(16),
+            child: isMobile
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('All Resources',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF111827))),
+                          OutlinedButton.icon(
+                            onPressed: () {},
+                            icon: const Icon(Icons.download_outlined, size: 14),
+                            label: const Text('Download'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        onChanged: (v) =>
+                            ref.read(_searchProvider.notifier).state = v,
+                        decoration: const InputDecoration(
+                          hintText: 'Search resources...',
+                          prefixIcon: Icon(Icons.search,
+                              size: 16, color: Color(0xFF9CA3AF)),
+                          contentPadding:
+                              EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        ),
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ],
+                  )
+                : Row(
+                    children: [
+                      const Text('All Resources',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF111827))),
+                      const Spacer(),
+                      SizedBox(
+                        width: 220,
+                        child: TextField(
+                          onChanged: (v) =>
+                              ref.read(_searchProvider.notifier).state = v,
+                          decoration: const InputDecoration(
+                            hintText: 'Search resources...',
+                            prefixIcon: Icon(Icons.search,
+                                size: 16, color: Color(0xFF9CA3AF)),
+                            contentPadding:
+                                EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          ),
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: () {},
+                        icon: const Icon(Icons.download_outlined, size: 14),
+                        label: const Text('Download'),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.download_outlined, size: 14),
-                  label: const Text('Download'),
-                ),
-              ],
-            ),
           ),
 
-          // Table header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            color: const Color(0xFFF9FAFB),
-            child: const Row(
-              children: [
-                Expanded(
-                    flex: 4,
-                    child: Text('Resource Name',
-                        style: _tableHeaderStyle)),
-                Expanded(
-                    flex: 2,
-                    child: Text('Type', style: _tableHeaderStyle)),
-                Expanded(
-                    flex: 2,
-                    child:
-                        Text('Location', style: _tableHeaderStyle)),
-                Expanded(
-                    flex: 2,
-                    child: Text('Status', style: _tableHeaderStyle)),
-                Expanded(
-                    flex: 2,
-                    child:
-                        Text('Availability', style: _tableHeaderStyle)),
-                Expanded(
-                    flex: 3,
-                    child:
-                        Text('Last Updated', style: _tableHeaderStyle)),
-                SizedBox(
-                    width: 60,
-                    child:
-                        Text('Actions', style: _tableHeaderStyle)),
-              ],
+          if (!isMobile) ...[
+            // Table header (desktop only)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: const Color(0xFFF9FAFB),
+              child: const Row(
+                children: [
+                  Expanded(
+                      flex: 4,
+                      child: Text('Resource Name',
+                          style: _tableHeaderStyle)),
+                  Expanded(
+                      flex: 2,
+                      child: Text('Type', style: _tableHeaderStyle)),
+                  Expanded(
+                      flex: 2,
+                      child:
+                          Text('Location', style: _tableHeaderStyle)),
+                  Expanded(
+                      flex: 2,
+                      child: Text('Status', style: _tableHeaderStyle)),
+                  Expanded(
+                      flex: 2,
+                      child:
+                          Text('Availability', style: _tableHeaderStyle)),
+                  Expanded(
+                      flex: 3,
+                      child:
+                          Text('Last Updated', style: _tableHeaderStyle)),
+                  SizedBox(
+                      width: 60,
+                      child:
+                          Text('Actions', style: _tableHeaderStyle)),
+                ],
+              ),
             ),
-          ),
-          const Divider(height: 1, color: Color(0xFFE5E7EB)),
+            const Divider(height: 1, color: Color(0xFFE5E7EB)),
+          ],
 
-          // Table rows
-          ...filtered.map((r) => _ResourceRow(resource: r)),
+          // Table rows or card list
+          if (isMobile) ...[
+            ...filtered.map((r) => _MobileResourceCard(resource: r)),
+          ] else ...[
+            ...filtered.map((r) => _ResourceRow(resource: r)),
+          ],
 
           if (filtered.isEmpty)
             const Padding(
@@ -685,6 +726,143 @@ class _ResourceRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       child: Icon(icon, size: 14, color: color),
+    );
+  }
+}
+
+class _MobileResourceCard extends StatelessWidget {
+  final _Resource resource;
+  const _MobileResourceCard({required this.resource});
+
+  Color get _statusColor => switch (resource.status) {
+        'Available' => const Color(0xFF16A34A),
+        'Deployed' => const Color(0xFF0EA5E9),
+        'Maintenance' => const Color(0xFFF59E0B),
+        'Offline' => const Color(0xFFDC2626),
+        _ => const Color(0xFF6B7280),
+      };
+
+  Widget _typeIcon(String type) {
+    final color = switch (type) {
+      'Pumping Station' => const Color(0xFF0EA5E9),
+      'Evacuation Center' => const Color(0xFF16A34A),
+      'Rescue Asset' => const Color(0xFFDC2626),
+      'Medical Facility' => const Color(0xFF8B5CF6),
+      'Warehouse' => const Color(0xFFF59E0B),
+      _ => const Color(0xFF6B7280),
+    };
+    final icon = switch (type) {
+      'Pumping Station' => Icons.water_drop_outlined,
+      'Evacuation Center' => Icons.home_outlined,
+      'Rescue Asset' => Icons.directions_boat_outlined,
+      'Medical Facility' => Icons.local_hospital_outlined,
+      'Warehouse' => Icons.warehouse_outlined,
+      _ => Icons.inventory_2_outlined,
+    };
+    return Container(
+      padding: const EdgeInsets.all(5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Icon(icon, size: 14, color: color),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB))),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _typeIcon(resource.type),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      resource.name,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF111827),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${resource.type} • ${resource.location}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, size: 16, color: Color(0xFF6B7280)),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                onSelected: (val) {},
+                itemBuilder: (context) => [
+                  const PopupMenuItem(value: 'view', child: Text('View Details')),
+                  const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      color: _statusColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    resource.status,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF374151),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    '${resource.availability}% Available',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: _statusColor,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                resource.lastUpdated.split('  ').last,
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Color(0xFF9CA3AF),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

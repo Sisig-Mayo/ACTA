@@ -174,6 +174,8 @@ class _OverviewTab extends ConsumerWidget {
       }
     }
 
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -208,18 +210,21 @@ class _OverviewTab extends ConsumerWidget {
               ],
             ),
           ),
-
-          const SizedBox(height: 16),
-
-          // Bottom two cards side-by-side
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: _OperationalBaselineCard()),
-              const SizedBox(width: 16),
-              Expanded(child: _PriorityRiskAreasCard()),
-            ],
-          ),
+          // Bottom two cards side-by-side on desktop, stacked on mobile
+          if (isMobile) ...[
+            _OperationalBaselineCard(),
+            const SizedBox(height: 16),
+            _PriorityRiskAreasCard(),
+          ] else ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: _OperationalBaselineCard()),
+                const SizedBox(width: 16),
+                Expanded(child: _PriorityRiskAreasCard()),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -425,6 +430,8 @@ class _StatRow extends StatelessWidget {
 class _PriorityRiskAreasCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
     return _card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -445,19 +452,83 @@ class _PriorityRiskAreasCard extends StatelessWidget {
             const SizedBox(height: 12),
             const Divider(height: 1, color: Color(0xFFE5E7EB)),
             const SizedBox(height: 8),
-            // Table header
-            const Row(
-              children: [
-                SizedBox(width: 24, child: Text('#', style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)))),
-                Expanded(flex: 2, child: Text('Area', style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)))),
-                Expanded(flex: 3, child: Text('Risk Level (Baseline)', style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)))),
-                Expanded(flex: 3, child: Text('Key Risk Factors', style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)))),
-              ],
-            ),
-            const SizedBox(height: 6),
+            if (!isMobile) ...[
+              // Table header
+              const Row(
+                children: [
+                  SizedBox(width: 24, child: Text('#', style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)))),
+                  Expanded(flex: 2, child: Text('Area', style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)))),
+                  Expanded(flex: 3, child: Text('Risk Level (Baseline)', style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)))),
+                  Expanded(flex: 3, child: Text('Key Risk Factors', style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)))),
+                ],
+              ),
+              const SizedBox(height: 6),
+            ],
             ..._priorityAreas.asMap().entries.map((e) {
               final i = e.key;
               final area = e.value;
+              if (isMobile) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          color: area.riskColor,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Center(
+                          child: Text('${i + 1}',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(area.name,
+                                    style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF111827))),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: area.riskColor.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    area.riskLabel,
+                                    style: TextStyle(
+                                        color: area.riskColor,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w700),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(area.keyFactors,
+                                style: const TextStyle(
+                                    fontSize: 11, color: Color(0xFF6B7280))),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 child: Row(
@@ -671,6 +742,7 @@ class _ResourcesOverviewTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Wrap(
@@ -678,7 +750,7 @@ class _ResourcesOverviewTab extends StatelessWidget {
         runSpacing: 16,
         children: _resources
             .map((r) => SizedBox(
-                  width: 280,
+                  width: isMobile ? double.infinity : 280,
                   child: _ResourceOverviewCard(
                     label: r.$1,
                     count: r.$2,
