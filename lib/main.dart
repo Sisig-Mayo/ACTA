@@ -40,7 +40,7 @@ class ActaApp extends StatelessWidget {
 
   /// Premium dark theme with custom color palette.
   ThemeData _buildDarkTheme() {
-    const primaryColor = Color(0xFF00BFA6); // Teal accent
+    const primaryColor = Color(0xFF0091FF); // Electric Blue accent
     const surfaceColor = Color(0xFF1A1D23); // Deep charcoal
     const cardColor = Color(0xFF22262E); // Elevated surface
     const errorColor = Color(0xFFFF5252); // Alert red
@@ -50,14 +50,14 @@ class ActaApp extends StatelessWidget {
       brightness: Brightness.dark,
       colorScheme: const ColorScheme.dark(
         primary: primaryColor,
-        secondary: Color(0xFF26C6DA),
+        secondary: Color(0xFF00D2FF),
         surface: surfaceColor,
         error: errorColor,
         onPrimary: Colors.black,
         onSecondary: Colors.black,
         onSurface: Colors.white,
       ),
-      scaffoldBackgroundColor: const Color(0xFF12141A),
+      scaffoldBackgroundColor: const Color(0xFF0B0F19),
       cardColor: cardColor,
       textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
       appBarTheme: AppBarTheme(
@@ -73,7 +73,7 @@ class ActaApp extends StatelessWidget {
       sliderTheme: const SliderThemeData(
         activeTrackColor: primaryColor,
         thumbColor: primaryColor,
-        overlayColor: Color(0x2900BFA6),
+        overlayColor: Color(0x290091FF),
         inactiveTrackColor: Color(0xFF3A3F4B),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
