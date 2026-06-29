@@ -507,17 +507,17 @@ class _MasterPlanBody extends ConsumerWidget {
     switch (priority.toUpperCase()) {
       case 'CRITICAL':
       case 'HIGH':
-        color = const Color(0xFF1E3A8A);
-        bg = const Color(0xFFDBEAFE);
+        color = const Color(0xFFDC2626);
+        bg = const Color(0xFFFEF2F2);
         break;
       case 'MEDIUM':
-        color = const Color(0xFF2563EB);
-        bg = const Color(0xFFEFF6FF);
+        color = const Color(0xFFD97706);
+        bg = const Color(0xFFFFFBEB);
         break;
       case 'LOW':
       default:
-        color = const Color(0xFF0EA5E9);
-        bg = const Color(0xFFF0F9FF);
+        color = const Color(0xFF16A34A);
+        bg = const Color(0xFFF0FDF4);
         break;
     }
 
