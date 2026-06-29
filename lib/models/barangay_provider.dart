@@ -130,16 +130,16 @@ List<Polygon> buildBarangayMapPolygons(
       final zone = riskMap[b.name]!.toUpperCase();
       switch (zone) {
         case 'RED':
-          fillColor = const Color(0x77DC2626);
-          borderColor = const Color(0xFFDC2626);
+          fillColor = const Color(0x771E3A8A);
+          borderColor = const Color(0xFF1E3A8A);
           break;
         case 'YELLOW':
-          fillColor = const Color(0x77F59E0B);
-          borderColor = const Color(0xFFF59E0B);
+          fillColor = const Color(0x772563EB);
+          borderColor = const Color(0xFF2563EB);
           break;
         default:
-          fillColor = const Color(0x4416A34A);
-          borderColor = const Color(0xFF16A34A);
+          fillColor = const Color(0x440EA5E9);
+          borderColor = const Color(0xFF0EA5E9);
       }
     } else {
       // Default: semi-transparent outline
