@@ -119,6 +119,7 @@ class _SimulationSetupContentState
         // Safely set all states now that we have runId
         ref.read(simulationRunIdProvider.notifier).state = runId;
         ref.read(simulationProgressProvider.notifier).state = 0;
+        ref.read(simulationResultProvider.notifier).state = null;
         ref.read(simulationRunStateProvider.notifier).state =
             SimulationRunState.running;
         

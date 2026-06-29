@@ -11,10 +11,13 @@ operational standards.
 References:
     - PAGASA Tropical Cyclone Intensity Scale
     - PAGASA Color-Coded Rainfall Advisory System
+    - PAGASA Storm Surge Advisory System
 """
 
 from __future__ import annotations
 
+import math
+from dataclasses import dataclass, field
 from typing import Any
 
 
@@ -67,12 +70,12 @@ def wind_risk_factor(wind_speed_kph: float) -> float:
     Convert wind speed to a continuous 0–1 risk factor
     calibrated against PAGASA thresholds.
 
-    Mapping:
+    Revised mapping (sharper at high end):
         TD  (0–61):     0.05 – 0.20
         TS  (62–88):    0.20 – 0.40
-        STS (89–117):   0.40 – 0.60
-        TY  (118–184):  0.60 – 0.85
-        STY (185+):     0.85 – 1.00
+        STS (89–117):   0.40 – 0.65
+        TY  (118–184):  0.65 – 0.90
+        STY (185+):     0.90 – 1.00  (saturates by ~250 kph)
     """
     if wind_speed_kph <= 0:
         return 0.0
@@ -81,11 +84,12 @@ def wind_risk_factor(wind_speed_kph: float) -> float:
     elif wind_speed_kph <= 88:
         return 0.20 + ((wind_speed_kph - 62) / 26) * 0.20
     elif wind_speed_kph <= 117:
-        return 0.40 + ((wind_speed_kph - 89) / 28) * 0.20
+        return 0.40 + ((wind_speed_kph - 89) / 28) * 0.25
     elif wind_speed_kph <= 184:
-        return 0.60 + ((wind_speed_kph - 118) / 66) * 0.25
+        return 0.65 + ((wind_speed_kph - 118) / 66) * 0.25
     else:
-        return min(0.85 + ((wind_speed_kph - 185) / 215) * 0.15, 1.0)
+        # Saturates quickly: 250 kph → ~0.99
+        return min(0.90 + ((wind_speed_kph - 185) / 65) * 0.10, 1.0)
 
 
 # -----------------------------------------------------------
@@ -142,34 +146,103 @@ def classify_rainfall(mm_per_hour: float) -> str:
 def rainfall_risk_factor(precipitation_24h_mm: float) -> float:
     """
     Convert 24-hour accumulated rainfall to a continuous 0–1
-    risk factor calibrated against PAGASA advisory thresholds.
+    risk factor using DIRECT 24h total thresholds.
 
-    Assumes sustained rainfall; converts 24h total to approximate
-    hourly rate for PAGASA tier mapping, then produces a score.
+    Previous version divided by 24 (assuming uniform hourly rate),
+    which massively under-scored typhoon rainfall because real
+    typhoon rain is concentrated in intense bursts.
 
-    Mapping (24h totals → approximate hourly → factor):
-        ≤ 180mm (≤7.5mm/h):    0.05 – 0.25  (GREEN)
-        180–360mm (7.5–15mm/h): 0.25 – 0.50  (YELLOW)
-        360–720mm (15–30mm/h):  0.50 – 0.80  (ORANGE)
-        > 720mm (>30mm/h):      0.80 – 1.00  (RED)
+    Revised mapping (based on PAGASA 24h rainfall warning levels):
+        ≤ 50mm:        0.05 – 0.20  (Light — no flood expected)
+        50–100mm:      0.20 – 0.40  (Moderate — minor flooding)
+        100–200mm:     0.40 – 0.65  (Heavy — significant flooding)
+        200–350mm:     0.65 – 0.85  (Intense — severe flooding)
+        350–500mm:     0.85 – 0.95  (Extreme — catastrophic)
+        > 500mm:       0.95 – 1.00  (Unprecedented)
+
+    These thresholds reflect Manila's drainage capacity (~50mm/day
+    without flooding) and historical typhoon rainfall totals
+    (Ondoy: ~450mm, Ulysses: ~300mm, Karding: ~200mm).
     """
     if precipitation_24h_mm <= 0:
         return 0.0
 
-    hourly_approx = precipitation_24h_mm / 24.0
+    mm = precipitation_24h_mm
 
-    if hourly_approx <= 7.5:
-        # GREEN tier
-        return 0.05 + (hourly_approx / 7.5) * 0.20
-    elif hourly_approx <= 15.0:
-        # YELLOW tier
-        return 0.25 + ((hourly_approx - 7.5) / 7.5) * 0.25
-    elif hourly_approx <= 30.0:
-        # ORANGE tier
-        return 0.50 + ((hourly_approx - 15.0) / 15.0) * 0.30
+    if mm <= 50:
+        # Light rain — drainage can handle it
+        return 0.05 + (mm / 50) * 0.15
+    elif mm <= 100:
+        # Moderate — minor ponding in low-lying areas
+        return 0.20 + ((mm - 50) / 50) * 0.20
+    elif mm <= 200:
+        # Heavy — significant flooding likely
+        return 0.40 + ((mm - 100) / 100) * 0.25
+    elif mm <= 350:
+        # Intense — severe flooding (Karding-level)
+        return 0.65 + ((mm - 200) / 150) * 0.20
+    elif mm <= 500:
+        # Extreme — catastrophic (Ondoy-level)
+        return 0.85 + ((mm - 350) / 150) * 0.10
     else:
-        # RED tier
-        return min(0.80 + ((hourly_approx - 30.0) / 30.0) * 0.20, 1.0)
+        # Unprecedented
+        return min(0.95 + ((mm - 500) / 500) * 0.05, 1.0)
+
+
+def storm_surge_factor(
+    wind_speed_kph: float,
+    coastal_distance_km: float,
+) -> float:
+    """
+    Estimate storm surge risk based on wind speed and distance
+    to coastline, calibrated against PAGASA Storm Surge Advisory.
+
+    Storm surge is the most lethal flood mechanism for coastal
+    areas during typhoons. It is driven primarily by wind speed
+    and is amplified in shallow coastal waters.
+
+    PAGASA Storm Surge Advisory levels:
+        Advisory 1: Up to 1m surge (TS/STS winds)
+        Advisory 2: 1–2m surge (TY winds)
+        Advisory 3: 2–5m surge (STY winds)
+
+    The factor decays exponentially with distance from coast
+    (surge penetrates ~2-5km inland depending on terrain).
+
+    Parameters
+    ----------
+    wind_speed_kph : float
+        Sustained wind speed in km/h.
+    coastal_distance_km : float
+        Distance from barangay centroid to nearest coastline in km.
+        Use 0.0 for waterfront barangays.
+
+    Returns
+    -------
+    float
+        Storm surge risk factor in [0, 1].
+    """
+    if wind_speed_kph < 62 or coastal_distance_km > 10.0:
+        # No meaningful surge below Tropical Storm winds
+        # or beyond 10km inland.
+        return 0.0
+
+    # Wind-driven surge intensity (0-1)
+    if wind_speed_kph <= 117:
+        # TS/STS: Advisory 1 (up to 1m)
+        wind_surge = 0.2 + ((wind_speed_kph - 62) / 55) * 0.3
+    elif wind_speed_kph <= 184:
+        # TY: Advisory 2 (1-2m)
+        wind_surge = 0.5 + ((wind_speed_kph - 118) / 66) * 0.3
+    else:
+        # STY: Advisory 3 (2-5m)
+        wind_surge = min(0.8 + ((wind_speed_kph - 185) / 100) * 0.2, 1.0)
+
+    # Exponential distance decay (half-life ~1.5km)
+    # At 0km: factor=1.0, at 1.5km: factor≈0.5, at 5km: factor≈0.1
+    distance_decay = math.exp(-0.46 * coastal_distance_km)
+
+    return wind_surge * distance_decay
 
 
 # -----------------------------------------------------------
@@ -269,3 +342,65 @@ def determine_severity(
     elif max_severity >= 2:
         return "moderate"
     return "low"
+
+
+# -----------------------------------------------------------
+# 5. Risk Model Configuration
+# -----------------------------------------------------------
+# All scoring weights and thresholds in one tunable dataclass.
+# Adjustable without code changes — swap in a new instance
+# to recalibrate the model.
+
+@dataclass
+class RiskModelConfig:
+    """
+    Tunable parameters for the composite risk scoring model.
+
+    Weights must sum to 1.0 for normalized output.
+    Thresholds determine GREEN/YELLOW/RED tier boundaries.
+    """
+    # --- Component weights (must sum to 1.0) ---
+    weight_rainfall: float = 0.30
+    weight_wind: float = 0.15
+    weight_elevation: float = 0.20
+    weight_historical: float = 0.10
+    weight_surge: float = 0.15
+    weight_drainage: float = 0.10
+
+    # --- Tier thresholds (0-1 scale) ---
+    tier_red: float = 0.70
+    tier_yellow: float = 0.40
+
+    # --- Synergy boost ---
+    # Amplification when BOTH rainfall AND wind are extreme.
+    # Models the real-world fact that concurrent extreme rain
+    # + wind is more dangerous than the sum of parts.
+    synergy_multiplier: float = 0.30
+    synergy_rain_threshold: float = 0.60   # rainfall_factor above this
+    synergy_wind_threshold: float = 0.60   # wind_factor above this
+
+    # --- Historical frequency ---
+    historical_decay_factor: float = 200.0  # was 50; ~10km influence radius
+    historical_max_penalty: float = 0.95    # was 0.9
+
+    # --- Elevation / coastal model ---
+    coastal_longitude_ref: float = 120.96   # Manila Bay coast reference lng
+    coastal_proximity_scale: float = 12.0   # was 20; wider coastal influence
+    river_latitude_ref: float = 14.59       # Pasig River reference lat
+    river_proximity_scale: float = 10.0     # was 15; wider river influence
+
+    def validate(self) -> None:
+        """Ensure weights sum to 1.0 (within floating-point tolerance)."""
+        total = (
+            self.weight_rainfall + self.weight_wind +
+            self.weight_elevation + self.weight_historical +
+            self.weight_surge + self.weight_drainage
+        )
+        if abs(total - 1.0) > 0.01:
+            raise ValueError(
+                f"Risk model weights must sum to 1.0, got {total:.3f}"
+            )
+
+
+# Default configuration instance.
+DEFAULT_RISK_CONFIG = RiskModelConfig()
