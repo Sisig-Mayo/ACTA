@@ -15,7 +15,6 @@ import 'package:latlong2/latlong.dart';
 import 'app_shell.dart';
 import '../models/barangay_provider.dart';
 import '../models/simulation_state.dart';
-import '../models/simulation_models.dart';
 
 // -----------------------------------------------------------
 // Static Baseline Data
@@ -116,7 +115,7 @@ class _CommandCenterContentState
               icon: const Icon(Icons.article_outlined, size: 15),
               label: const Text('Generate Report'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF16A34A),
+                backgroundColor: const Color(0xFF1D4ED8),
               ),
             ),
           ],
@@ -735,9 +734,9 @@ class _AlertCard extends StatelessWidget {
 class _ResourcesOverviewTab extends StatelessWidget {
   static const _resources = [
     ('Pumping Stations', '12', '9 Online, 3 Offline', Color(0xFF0EA5E9)),
-    ('Rescue Boats', '64', '52 Ready, 12 Deployed', Color(0xFF16A34A)),
-    ('Evacuation Centers', '42', '38 Open, 4 At Capacity', Color(0xFF8B5CF6)),
-    ('Medical Teams', '24', '18 On Standby', Color(0xFFF59E0B)),
+    ('Rescue Boats', '64', '52 Ready, 12 Deployed', Color(0xFF60A5FA)),
+    ('Evacuation Centers', '42', '38 Open, 4 At Capacity', Color(0xFF2563EB)),
+    ('Medical Teams', '24', '18 On Standby', Color(0xFF1D4ED8)),
   ];
 
   @override

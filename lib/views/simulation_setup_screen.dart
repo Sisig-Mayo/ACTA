@@ -215,7 +215,7 @@ class _SimulationSetupContentState
                       icon: const Icon(Icons.play_arrow_rounded, size: 18),
                       label: const Text('Run Simulation'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF16A34A),
+                        backgroundColor: const Color(0xFF1D4ED8),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
                           vertical: 14,
@@ -246,7 +246,7 @@ class _SimulationSetupContentState
                         icon: const Icon(Icons.play_arrow_rounded, size: 18),
                         label: const Text('Run Simulation'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF16A34A),
+                          backgroundColor: const Color(0xFF1D4ED8),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 24,
                             vertical: 14,

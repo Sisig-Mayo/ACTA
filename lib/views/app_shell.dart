@@ -107,7 +107,7 @@ final _sidebarNotificationsProvider = Provider<List<_SidebarNotification>>((
             '${result.impactedBarangays.length} barangays analyzed with ${result.taskList.length} recommended actions.',
         actionLabel: 'View plan',
         icon: Icons.check_circle_outline,
-        color: const Color(0xFF16A34A),
+        color: const Color(0xFF0EA5E9),
         targetIndex: 2,
       ),
     );
@@ -125,7 +125,7 @@ final _sidebarNotificationsProvider = Provider<List<_SidebarNotification>>((
               '$criticalCount red-zone barangays require immediate operations review.',
           actionLabel: 'Open command',
           icon: Icons.warning_amber_rounded,
-          color: const Color(0xFFF59E0B),
+          color: const Color(0xFF1D4ED8),
           targetIndex: 0,
         ),
       );
@@ -155,7 +155,7 @@ final _sidebarNotificationsProvider = Provider<List<_SidebarNotification>>((
           message: 'Master action plan has been approved and dispatched.',
           actionLabel: 'Open report',
           icon: Icons.send_rounded,
-          color: const Color(0xFF16A34A),
+          color: const Color(0xFF0EA5E9),
           targetIndex: 4,
         ),
       );
@@ -170,7 +170,7 @@ final _sidebarNotificationsProvider = Provider<List<_SidebarNotification>>((
 // -----------------------------------------------------------
 
 ThemeData buildDashboardTheme() {
-  const primary = Color(0xFF16A34A);
+  const primary = Color(0xFF1D4ED8);
   return ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
@@ -481,7 +481,7 @@ class _NavTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
           decoration: BoxDecoration(
             color: isSelected
-                ? const Color(0xFF16A34A).withValues(alpha: 0.15)
+                ? const Color(0xFF1D4ED8).withValues(alpha: 0.15)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
           ),
@@ -491,7 +491,7 @@ class _NavTile extends StatelessWidget {
                 item.icon,
                 size: 17,
                 color: isSelected
-                    ? const Color(0xFF4ADE80)
+                    ? const Color(0xFF60A5FA)
                     : const Color(0xFF94A3B8),
               ),
               const SizedBox(width: 10),
@@ -531,7 +531,7 @@ class _BrandHeader extends StatelessWidget {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: const Color(0xFF16A34A),
+              color: const Color(0xFF1D4ED8),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Center(
@@ -882,7 +882,7 @@ class _SettingsOverlayState extends ConsumerState<_SettingsOverlay> {
       _currentPasswordController.clear();
       _newPasswordController.clear();
       _confirmPasswordController.clear();
-      _showSnack('Password changed successfully.', const Color(0xFF16A34A));
+      _showSnack('Password changed successfully.', const Color(0xFF1D4ED8));
     } on DioException catch (e) {
       final detail =
           e.response?.data?['detail']?.toString() ?? 'Password update failed.';
@@ -1033,12 +1033,12 @@ class _SettingsHeader extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: const Color(0xFF16A34A).withValues(alpha: 0.12),
+              color: const Color(0xFF1D4ED8).withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
               Icons.settings_outlined,
-              color: Color(0xFF16A34A),
+              color: Color(0xFF1D4ED8),
               size: 20,
             ),
           ),
@@ -1100,7 +1100,7 @@ class _SettingsSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, size: 18, color: const Color(0xFF16A34A)),
+              Icon(icon, size: 18, color: const Color(0xFF1D4ED8)),
               const SizedBox(width: 8),
               Text(
                 title,
@@ -1137,7 +1137,7 @@ class _AccountDetailsSection extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 24,
-              backgroundColor: const Color(0xFF16A34A),
+              backgroundColor: const Color(0xFF1D4ED8),
               child: Text(
                 user?.initials.isNotEmpty == true ? user!.initials : 'OP',
                 style: const TextStyle(
@@ -1496,7 +1496,7 @@ class _SettingsSwitchRow extends StatelessWidget {
           ),
           Switch(
             value: value,
-            activeThumbColor: const Color(0xFF16A34A),
+            activeThumbColor: const Color(0xFF1D4ED8),
             onChanged: onChanged,
           ),
         ],
@@ -1519,10 +1519,10 @@ class _StatusRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = isChecking
-        ? const Color(0xFFF59E0B)
+        ? const Color(0xFF2563EB)
         : healthy
-        ? const Color(0xFF16A34A)
-        : const Color(0xFFDC2626);
+        ? const Color(0xFF0EA5E9)
+        : const Color(0xFF1E3A8A);
     final text = isChecking
         ? 'Checking'
         : healthy

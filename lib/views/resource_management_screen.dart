@@ -148,8 +148,8 @@ class ResourceManagementContent extends ConsumerWidget {
               onPressed: () {},
               icon: const Icon(Icons.add, size: 15),
               label: const Text('Add New Resource'),
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF16A34A)),
+               style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1D4ED8)),
             ),
           ],
         ),
@@ -185,14 +185,14 @@ class _ResourceMapCardState extends ConsumerState<_ResourceMapCard> {
     final layers = ref.watch(_layersProvider);
 
     Color markerColor(String type, String status) {
-      if (status == 'Maintenance') return const Color(0xFFF59E0B);
-      if (status == 'Offline') return const Color(0xFFDC2626);
+      if (status == 'Maintenance') return const Color(0xFF1D4ED8);
+      if (status == 'Offline') return const Color(0xFF1E3A8A);
       return switch (type) {
-        'Evacuation Center' => const Color(0xFF16A34A),
+        'Evacuation Center' => const Color(0xFF60A5FA),
         'Pumping Station' => const Color(0xFF0EA5E9),
-        'Rescue Asset' => const Color(0xFFDC2626),
-        'Medical Facility' => const Color(0xFF8B5CF6),
-        'Warehouse' => const Color(0xFFF59E0B),
+        'Rescue Asset' => const Color(0xFF2563EB),
+        'Medical Facility' => const Color(0xFF1D4ED8),
+        'Warehouse' => const Color(0xFF1E3A8A),
         _ => const Color(0xFF6B7280),
       };
     }
@@ -295,11 +295,11 @@ class _ResourceMapCardState extends ConsumerState<_ResourceMapCard> {
                         const SizedBox(height: 5),
                         ...layers.keys.map((k) {
                           final color = switch (k) {
-                            'Evacuation Centers' => const Color(0xFF16A34A),
+                            'Evacuation Centers' => const Color(0xFF60A5FA),
                             'Pumping Stations' => const Color(0xFF0EA5E9),
-                            'Rescue Assets' => const Color(0xFFDC2626),
-                            'Medical Facilities' => const Color(0xFF8B5CF6),
-                            'Warehouses' => const Color(0xFFF59E0B),
+                            'Rescue Assets' => const Color(0xFF2563EB),
+                            'Medical Facilities' => const Color(0xFF1D4ED8),
+                            'Warehouses' => const Color(0xFF1E3A8A),
                             _ => const Color(0xFF6B7280),
                           };
                           return _layerCheck(k, layers[k]!, color);
@@ -359,10 +359,10 @@ class _ResourceMapCardState extends ConsumerState<_ResourceMapCard> {
                                 fontWeight: FontWeight.w700,
                                 color: Color(0xFF374151))),
                         const SizedBox(height: 5),
-                        _statusDot(const Color(0xFF16A34A), 'Available'),
-                        _statusDot(const Color(0xFF0EA5E9), 'Deployed'),
-                        _statusDot(const Color(0xFFF59E0B), 'Maintenance'),
-                        _statusDot(const Color(0xFFDC2626), 'Offline'),
+                         _statusDot(const Color(0xFF38BDF8), 'Available'),
+                         _statusDot(const Color(0xFF0284C7), 'Deployed'),
+                         _statusDot(const Color(0xFF1D4ED8), 'Maintenance'),
+                         _statusDot(const Color(0xFF1E3A8A), 'Offline'),
                       ],
                     ),
                   ),
@@ -601,10 +601,10 @@ class _ResourceRow extends StatelessWidget {
   const _ResourceRow({required this.resource});
 
   Color get _statusColor => switch (resource.status) {
-        'Available' => const Color(0xFF16A34A),
-        'Deployed' => const Color(0xFF0EA5E9),
-        'Maintenance' => const Color(0xFFF59E0B),
-        'Offline' => const Color(0xFFDC2626),
+        'Available' => const Color(0xFF38BDF8),
+        'Deployed' => const Color(0xFF0284C7),
+        'Maintenance' => const Color(0xFF1D4ED8),
+        'Offline' => const Color(0xFF1E3A8A),
         _ => const Color(0xFF6B7280),
       };
 
@@ -705,10 +705,10 @@ class _ResourceRow extends StatelessWidget {
   Widget _typeIcon(String type) {
     final color = switch (type) {
       'Pumping Station' => const Color(0xFF0EA5E9),
-      'Evacuation Center' => const Color(0xFF16A34A),
-      'Rescue Asset' => const Color(0xFFDC2626),
-      'Medical Facility' => const Color(0xFF8B5CF6),
-      'Warehouse' => const Color(0xFFF59E0B),
+      'Evacuation Center' => const Color(0xFF60A5FA),
+      'Rescue Asset' => const Color(0xFF2563EB),
+      'Medical Facility' => const Color(0xFF1D4ED8),
+      'Warehouse' => const Color(0xFF1E3A8A),
       _ => const Color(0xFF6B7280),
     };
     final icon = switch (type) {
@@ -735,20 +735,20 @@ class _MobileResourceCard extends StatelessWidget {
   const _MobileResourceCard({required this.resource});
 
   Color get _statusColor => switch (resource.status) {
-        'Available' => const Color(0xFF16A34A),
-        'Deployed' => const Color(0xFF0EA5E9),
-        'Maintenance' => const Color(0xFFF59E0B),
-        'Offline' => const Color(0xFFDC2626),
+        'Available' => const Color(0xFF38BDF8),
+        'Deployed' => const Color(0xFF0284C7),
+        'Maintenance' => const Color(0xFF1D4ED8),
+        'Offline' => const Color(0xFF1E3A8A),
         _ => const Color(0xFF6B7280),
       };
 
   Widget _typeIcon(String type) {
     final color = switch (type) {
       'Pumping Station' => const Color(0xFF0EA5E9),
-      'Evacuation Center' => const Color(0xFF16A34A),
-      'Rescue Asset' => const Color(0xFFDC2626),
-      'Medical Facility' => const Color(0xFF8B5CF6),
-      'Warehouse' => const Color(0xFFF59E0B),
+      'Evacuation Center' => const Color(0xFF60A5FA),
+      'Rescue Asset' => const Color(0xFF2563EB),
+      'Medical Facility' => const Color(0xFF1D4ED8),
+      'Warehouse' => const Color(0xFF1E3A8A),
       _ => const Color(0xFF6B7280),
     };
     final icon = switch (type) {
