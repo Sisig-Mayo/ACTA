@@ -22,11 +22,8 @@ import 'app_shell.dart';
 final _rainfallProvider = StateProvider<String>((ref) => '120');
 final _windSpeedProvider = StateProvider<String>((ref) => '65');
 final _prepWindowProvider = StateProvider<String>((ref) => '24 Hours');
-final _pumpingStatusProvider = StateProvider<String>((ref) => '3 Offline');
-final _rescueAssetsProvider = StateProvider<String>(
-  (ref) => '12 Boats Available',
-);
-final _notesProvider = StateProvider<String>((ref) => '');
+
+
 
 // -----------------------------------------------------------
 // Simulation Setup Content
@@ -44,21 +41,18 @@ class _SimulationSetupContentState
     extends ConsumerState<SimulationSetupContent> {
   late final TextEditingController _rainfallCtrl;
   late final TextEditingController _windCtrl;
-  late final TextEditingController _notesCtrl;
 
   @override
   void initState() {
     super.initState();
     _rainfallCtrl = TextEditingController(text: ref.read(_rainfallProvider));
     _windCtrl = TextEditingController(text: ref.read(_windSpeedProvider));
-    _notesCtrl = TextEditingController(text: ref.read(_notesProvider));
   }
 
   @override
   void dispose() {
     _rainfallCtrl.dispose();
     _windCtrl.dispose();
-    _notesCtrl.dispose();
     super.dispose();
   }
 
@@ -87,8 +81,6 @@ class _SimulationSetupContentState
       'rainfall_mm': rainfall,
       'wind_kph': wind,
       'prep_hours': prepWindow,
-      'pumping_status': ref.read(_pumpingStatusProvider),
-      'rescue_assets': ref.read(_rescueAssetsProvider),
     };
 
     try {
@@ -152,12 +144,10 @@ class _SimulationSetupContentState
     ref.read(simProfileProvider.notifier).state = SimProfile.hydrologicFlood;
     _rainfallCtrl.text = '120';
     _windCtrl.text = '65';
-    _notesCtrl.text = '';
     ref.read(_rainfallProvider.notifier).state = '120';
     ref.read(_windSpeedProvider.notifier).state = '65';
     ref.read(_prepWindowProvider.notifier).state = '24 Hours';
-    ref.read(_pumpingStatusProvider.notifier).state = '3 Offline';
-    ref.read(_rescueAssetsProvider.notifier).state = '12 Boats Available';
+
   }
 
   @override
@@ -202,7 +192,6 @@ class _SimulationSetupContentState
                 _ParametersForm(
                   rainfallCtrl: _rainfallCtrl,
                   windCtrl: _windCtrl,
-                  notesCtrl: _notesCtrl,
                 ),
                 const SizedBox(height: 32),
 
@@ -447,20 +436,15 @@ class _ProfileCard extends StatelessWidget {
 class _ParametersForm extends ConsumerWidget {
   final TextEditingController rainfallCtrl;
   final TextEditingController windCtrl;
-  final TextEditingController notesCtrl;
 
   const _ParametersForm({
     required this.rainfallCtrl,
     required this.windCtrl,
-    required this.notesCtrl,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final prepWindow = ref.watch(_prepWindowProvider);
-    final pumpingStatus = ref.watch(_pumpingStatusProvider);
-    final rescueAssets = ref.watch(_rescueAssetsProvider);
-    var notesLength = ref.watch(_notesProvider).length;
     final isMobile = MediaQuery.of(context).size.width < 768;
 
     return Container(
@@ -524,7 +508,7 @@ class _ParametersForm extends ConsumerWidget {
 
           const SizedBox(height: 20),
 
-          // Row 2: Prep Window | Pumping | Rescue (stacked on mobile)
+          // Row 2: Preparation Window (stacked on mobile)
           if (isMobile) ...[
             _paramDropdown(
               label: 'Preparation Window',
@@ -544,125 +528,26 @@ class _ParametersForm extends ConsumerWidget {
               onChanged: (v) =>
                   ref.read(_prepWindowProvider.notifier).state = v!,
             ),
-            const SizedBox(height: 16),
-            _paramDropdown(
-              label: 'Pumping Station Status',
-              helper: 'Select current operational status',
-              value: pumpingStatus,
-              items: const [
-                'All Online',
-                '1 Offline',
-                '2 Offline',
-                '3 Offline',
-                '4+ Offline',
-              ],
-              onChanged: (v) =>
-                  ref.read(_pumpingStatusProvider.notifier).state = v!,
-            ),
-            const SizedBox(height: 16),
-            _paramDropdown(
-              label: 'Rescue Asset Availability',
-              helper: 'Select available rescue assets',
-              value: rescueAssets,
-              items: const [
-                '4 Boats Available',
-                '8 Boats Available',
-                '12 Boats Available',
-                '16+ Boats Available',
-              ],
-              onChanged: (v) =>
-                  ref.read(_rescueAssetsProvider.notifier).state = v!,
-            ),
           ] else ...[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: _paramDropdown(
-                    label: 'Preparation Window',
-                    helper: 'Time available before impact',
-                    value: prepWindow,
-                    items: const [
-                      '6 Hours',
-                      '12 Hours',
-                      '24 Hours',
-                      '48 Hours',
-                      '1 Week',
-                      '2 Weeks',
-                      '1 Month',
-                      '3 Months',
-                      '6 Months',
-                    ],
-                    onChanged: (v) =>
-                        ref.read(_prepWindowProvider.notifier).state = v!,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _paramDropdown(
-                    label: 'Pumping Station Status',
-                    helper: 'Select current operational status',
-                    value: pumpingStatus,
-                    items: const [
-                      'All Online',
-                      '1 Offline',
-                      '2 Offline',
-                      '3 Offline',
-                      '4+ Offline',
-                    ],
-                    onChanged: (v) =>
-                        ref.read(_pumpingStatusProvider.notifier).state = v!,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _paramDropdown(
-                    label: 'Rescue Asset Availability',
-                    helper: 'Select available rescue assets',
-                    value: rescueAssets,
-                    items: const [
-                      '4 Boats Available',
-                      '8 Boats Available',
-                      '12 Boats Available',
-                      '16+ Boats Available',
-                    ],
-                    onChanged: (v) =>
-                        ref.read(_rescueAssetsProvider.notifier).state = v!,
-                  ),
-                ),
+            _paramDropdown(
+              label: 'Preparation Window',
+              helper: 'Time available before impact',
+              value: prepWindow,
+              items: const [
+                '6 Hours',
+                '12 Hours',
+                '24 Hours',
+                '48 Hours',
+                '1 Week',
+                '2 Weeks',
+                '1 Month',
+                '3 Months',
+                '6 Months',
               ],
+              onChanged: (v) =>
+                  ref.read(_prepWindowProvider.notifier).state = v!,
             ),
           ],
-
-          const SizedBox(height: 20),
-
-          // Notes
-          const Text(
-            'Additional Notes (Optional)',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF374151),
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: notesCtrl,
-            maxLines: 4,
-            maxLength: 250,
-            onChanged: (v) => ref.read(_notesProvider.notifier).state = v,
-            decoration: const InputDecoration(
-              hintText: 'Add any scenario assumptions or notes...',
-              counterText: '',
-            ),
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              '$notesLength / 250',
-              style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
-            ),
-          ),
         ],
       ),
     );

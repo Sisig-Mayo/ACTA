@@ -717,16 +717,6 @@ class _SimSummaryCard extends StatelessWidget {
           ),
           _row(Icons.air, 'Wind Speed', '${get('wind_kph', '65')} km/h'),
           _row(Icons.location_city_outlined, 'Coverage', 'All 897 Barangays'),
-          _row(
-            Icons.water_outlined,
-            'Pumping Stations',
-            get('pumping_status', '3 Offline'),
-          ),
-          _row(
-            Icons.directions_boat_outlined,
-            'Rescue Assets',
-            get('rescue_assets', '12 Boats'),
-          ),
           const Divider(height: 16, color: Color(0xFFE5E7EB)),
           _row(Icons.access_time, 'Start Time', _nowLabel()),
         ],
