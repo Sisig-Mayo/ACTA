@@ -14,6 +14,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 
+import '../config/api_config.dart';
 import '../models/simulation_models.dart';
 import '../models/simulation_state.dart';
 import '../models/user_profile.dart';
@@ -36,7 +37,14 @@ final exportLoadingProvider = StateProvider<bool>((ref) => false);
 // -----------------------------------------------------------
 
 class MasterActionPlanContent extends ConsumerStatefulWidget {
-  const MasterActionPlanContent({super.key});
+  final GlobalKey? downloadButtonKey;
+  final bool showDownloadPlaceholder;
+
+  const MasterActionPlanContent({
+    super.key,
+    this.downloadButtonKey,
+    this.showDownloadPlaceholder = false,
+  });
 
   @override
   ConsumerState<MasterActionPlanContent> createState() =>
@@ -47,7 +55,7 @@ class _MasterActionPlanContentState
     extends ConsumerState<MasterActionPlanContent> {
   final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: 'https://acta-production.up.railway.app',
+      baseUrl: ApiConfig.baseUrl,
       connectTimeout: const Duration(seconds: 60),
       receiveTimeout: const Duration(seconds: 30),
     ),
@@ -140,19 +148,22 @@ class _MasterActionPlanContentState
           title: 'Master Action Plan',
           subtitle: 'Official signed-off PDF blueprint for disaster operations',
           actions: [
-            if (result != null)
-              OutlinedButton.icon(
-                onPressed: isExporting
-                    ? null
-                    : () => _handleDownloadPdf(result),
-                icon: isExporting
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.picture_as_pdf_outlined, size: 15),
-                label: Text(isExporting ? 'Generating...' : 'Download PDF'),
+            if (result != null || widget.showDownloadPlaceholder)
+              KeyedSubtree(
+                key: widget.downloadButtonKey,
+                child: OutlinedButton.icon(
+                  onPressed: result == null || isExporting
+                      ? null
+                      : () => _handleDownloadPdf(result),
+                  icon: isExporting
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.picture_as_pdf_outlined, size: 15),
+                  label: Text(isExporting ? 'Generating...' : 'Download PDF'),
+                ),
               ),
           ],
         ),
@@ -295,7 +306,7 @@ class _MasterPlanBody extends ConsumerWidget {
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
-                  color: const Color(0xFF16A34A),
+                  color: const Color(0xFF1D4ED8),
                   letterSpacing: 1.5,
                 ),
               ),
@@ -396,7 +407,7 @@ class _MasterPlanBody extends ConsumerWidget {
             style: GoogleFonts.inter(
               fontSize: 11,
               fontWeight: FontWeight.w800,
-              color: const Color(0xFF16A34A),
+              color: const Color(0xFF1D4ED8),
               letterSpacing: 1.5,
             ),
           ),
@@ -569,13 +580,13 @@ class _MasterPlanBody extends ConsumerWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: isApproved
-                  ? const Color(0xFFF0FDF4)
-                  : const Color(0xFFFFFBEB),
+                  ? const Color(0xFFF0F9FF)
+                  : const Color(0xFFEFF6FF),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: isApproved
-                    ? const Color(0xFFBBF7D0)
-                    : const Color(0xFFFDE68A),
+                    ? const Color(0xFF93C5FD)
+                    : const Color(0xFFBFDBFE),
               ),
             ),
             child: Row(
@@ -583,8 +594,8 @@ class _MasterPlanBody extends ConsumerWidget {
                 Icon(
                   isApproved ? Icons.verified : Icons.pending_actions_outlined,
                   color: isApproved
-                      ? const Color(0xFF16A34A)
-                      : const Color(0xFFD97706),
+                      ? const Color(0xFF0EA5E9)
+                      : const Color(0xFF2563EB),
                   size: 20,
                 ),
                 const SizedBox(width: 8),
@@ -600,8 +611,8 @@ class _MasterPlanBody extends ConsumerWidget {
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: isApproved
-                              ? const Color(0xFF15803D)
-                              : const Color(0xFFB45309),
+                              ? const Color(0xFF0284C7)
+                              : const Color(0xFF1D4ED8),
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -612,8 +623,8 @@ class _MasterPlanBody extends ConsumerWidget {
                         style: TextStyle(
                           fontSize: 10,
                           color: isApproved
-                              ? const Color(0xFF16A34A)
-                              : const Color(0xFFD97706),
+                              ? const Color(0xFF0EA5E9)
+                              : const Color(0xFF2563EB),
                         ),
                       ),
                     ],
@@ -632,14 +643,14 @@ class _MasterPlanBody extends ConsumerWidget {
                     icon: const Icon(
                       Icons.cancel_outlined,
                       size: 15,
-                      color: Color(0xFFDC2626),
+                      color: Color(0xFF1E3A8A),
                     ),
                     label: const Text(
                       'Revoke Approval',
-                      style: TextStyle(color: Color(0xFFDC2626)),
+                      style: TextStyle(color: Color(0xFF1E3A8A)),
                     ),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFFDC2626)),
+                      side: const BorderSide(color: Color(0xFF1E3A8A)),
                     ),
                   )
                 : ElevatedButton.icon(
@@ -660,7 +671,7 @@ class _MasterPlanBody extends ConsumerWidget {
                       isDispatching ? 'Dispatching...' : 'Approve & Dispatch',
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF16A34A),
+                      backgroundColor: const Color(0xFF1D4ED8),
                     ),
                   ),
           ),

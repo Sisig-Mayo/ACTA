@@ -7,12 +7,16 @@
 /// Target Branch : feat/dashboard
 library;
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
 
+import '../config/api_config.dart';
 import '../models/user_profile.dart';
+import '../models/simulation_models.dart';
 import '../models/simulation_state.dart';
 import '../utils/auth_storage.dart';
 import 'command_center_screen.dart';
@@ -33,8 +37,13 @@ final shellIndexProvider = StateProvider<int>((ref) => 0);
 /// Whether the Run Simulation sub-screen is active (within Simulation).
 final runSimulationActiveProvider = StateProvider<bool>((ref) => false);
 
-/// Notification toast visibility.
-final toastVisibleProvider = StateProvider<bool>((ref) => true);
+/// Notification ids dismissed from the sidebar for the current app session.
+final dismissedNotificationIdsProvider = StateProvider<Set<String>>(
+  (ref) => <String>{},
+);
+
+/// Active notification card shown in the sidebar carousel.
+final activeSidebarNotificationIndexProvider = StateProvider<int>((ref) => 0);
 
 /// Settings overlay visibility.
 final settingsOverlayVisibleProvider = StateProvider<bool>((ref) => false);
@@ -46,12 +55,125 @@ final simulationCompleteNotificationsProvider = StateProvider<bool>(
 final criticalRiskNotificationsProvider = StateProvider<bool>((ref) => true);
 final dispatchNotificationsProvider = StateProvider<bool>((ref) => true);
 
+class _SidebarNotification {
+  final String id;
+  final String label;
+  final String title;
+  final String message;
+  final String actionLabel;
+  final IconData icon;
+  final Color color;
+  final int targetIndex;
+
+  const _SidebarNotification({
+    required this.id,
+    required this.label,
+    required this.title,
+    required this.message,
+    required this.actionLabel,
+    required this.icon,
+    required this.color,
+    required this.targetIndex,
+  });
+}
+
+final _sidebarNotificationsProvider = Provider<List<_SidebarNotification>>((
+  ref,
+) {
+  final result = ref.watch(simulationResultProvider);
+  final runId =
+      ref.watch(simulationRunIdProvider) ??
+      result?.metadata['run_id']?.toString() ??
+      result?.hashCode.toString() ??
+      'latest';
+  final runState = ref.watch(simulationRunStateProvider);
+  final isDispatching = ref.watch(dispatchLoadingProvider);
+  final isPlanApproved = ref.watch(planApprovedProvider);
+  final dismissedIds = ref.watch(dismissedNotificationIdsProvider);
+  final notifications = <_SidebarNotification>[];
+
+  void add(_SidebarNotification notification) {
+    if (!dismissedIds.contains(notification.id)) {
+      notifications.add(notification);
+    }
+  }
+
+  if (ref.watch(simulationCompleteNotificationsProvider) &&
+      runState == SimulationRunState.completed &&
+      result != null) {
+    add(
+      _SidebarNotification(
+        id: 'simulation-complete-$runId',
+        label: 'New',
+        title: 'Simulation complete',
+        message:
+            '${result.impactedBarangays.length} barangays analyzed with ${result.taskList.length} recommended actions.',
+        actionLabel: 'View plan',
+        icon: Icons.check_circle_outline,
+        color: const Color(0xFF0EA5E9),
+        targetIndex: 2,
+      ),
+    );
+  }
+
+  if (ref.watch(criticalRiskNotificationsProvider) && result != null) {
+    final criticalCount = result.redZoneCount;
+    if (criticalCount > 0 || result.severityTier == SeverityTier.critical) {
+      add(
+        _SidebarNotification(
+          id: 'critical-risk-$runId',
+          label: 'Risk',
+          title: 'Critical risk threshold',
+          message:
+              '$criticalCount red-zone barangays require immediate operations review.',
+          actionLabel: 'Open command',
+          icon: Icons.warning_amber_rounded,
+          color: const Color(0xFF1D4ED8),
+          targetIndex: 0,
+        ),
+      );
+    }
+  }
+
+  if (ref.watch(dispatchNotificationsProvider)) {
+    if (isDispatching) {
+      add(
+        _SidebarNotification(
+          id: 'dispatch-in-progress-$runId',
+          label: 'Dispatch',
+          title: 'Dispatch in progress',
+          message: 'Master action plan notifications are being sent.',
+          actionLabel: 'Review',
+          icon: Icons.outgoing_mail,
+          color: const Color(0xFF0EA5E9),
+          targetIndex: 4,
+        ),
+      );
+    } else if (isPlanApproved) {
+      add(
+        _SidebarNotification(
+          id: 'dispatch-approved-$runId',
+          label: 'Sent',
+          title: 'Plan dispatched',
+          message: 'Master action plan has been approved and dispatched.',
+          actionLabel: 'Open report',
+          icon: Icons.send_rounded,
+          color: const Color(0xFF0EA5E9),
+          targetIndex: 4,
+        ),
+      );
+    }
+  }
+
+  return notifications;
+});
+
 // -----------------------------------------------------------
 // Light Dashboard Theme
 // -----------------------------------------------------------
 
 ThemeData buildDashboardTheme() {
-  const primary = Color(0xFF16A34A);
+  const primary = Color(0xFF1D4ED8);
   return ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
@@ -133,19 +255,206 @@ ThemeData buildDashboardTheme() {
 // -----------------------------------------------------------
 
 class AppShell extends ConsumerWidget {
-  const AppShell({super.key});
+  final bool showOnboarding;
+
+  const AppShell({super.key, this.showOnboarding = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Theme(data: buildDashboardTheme(), child: const _ShellScaffold());
+    return Theme(
+      data: buildDashboardTheme(),
+      child: _ShellScaffold(showOnboarding: showOnboarding),
+    );
   }
 }
 
-class _ShellScaffold extends ConsumerWidget {
-  const _ShellScaffold();
+class _ShellScaffold extends ConsumerStatefulWidget {
+  final bool showOnboarding;
+
+  const _ShellScaffold({required this.showOnboarding});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ShellScaffold> createState() => _ShellScaffoldState();
+}
+
+class _ShellScaffoldState extends ConsumerState<_ShellScaffold> {
+  late final List<GlobalKey> _navTileKeys;
+  final _classificationKey = GlobalKey();
+  final _runSimulationButtonKey = GlobalKey();
+  final _downloadButtonKey = GlobalKey();
+  bool _onboardingVisible = false;
+  int _onboardingStepIndex = 0;
+  Rect? _onboardingTargetRect;
+
+  static const _onboardingSteps = [
+    _OnboardingStep(
+      navIndex: 0,
+      target: _OnboardingTarget.commandCenter,
+      icon: Icons.grid_view_rounded,
+      title: 'Command Center',
+      body:
+          'Review the live operational picture, current alerts, risk map, and resource baseline from one place.',
+    ),
+    _OnboardingStep(
+      navIndex: 1,
+      target: _OnboardingTarget.simulation,
+      icon: Icons.science_outlined,
+      title: 'Simulation',
+      body:
+          'Move into Simulation when you are ready to configure a scenario and model the hazard impact.',
+    ),
+    _OnboardingStep(
+      navIndex: 1,
+      target: _OnboardingTarget.classification,
+      icon: Icons.category_outlined,
+      title: 'Select Classification',
+      body:
+          'Choose the simulation classification first. Flood is available now, while other classifications can be enabled later.',
+    ),
+    _OnboardingStep(
+      navIndex: 1,
+      target: _OnboardingTarget.runSimulation,
+      icon: Icons.play_arrow_rounded,
+      title: 'Run Simulation',
+      body:
+          'Use Run Simulation after the classification, wind, rainfall, and preparation window are set.',
+    ),
+    _OnboardingStep(
+      navIndex: 4,
+      target: _OnboardingTarget.masterPlan,
+      icon: Icons.article_outlined,
+      title: 'Master Plan',
+      body:
+          'Open Master Plan to review the generated blueprint, task ledger, approval status, and verification details.',
+    ),
+    _OnboardingStep(
+      navIndex: 4,
+      target: _OnboardingTarget.downloadButton,
+      icon: Icons.picture_as_pdf_outlined,
+      title: 'Download PDF',
+      body:
+          'When a plan has been generated, this button exports the official disaster action plan as a PDF.',
+    ),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _navTileKeys = List.generate(_Sidebar.navItemCount, (_) => GlobalKey());
+    if (widget.showOnboarding) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _startOnboarding());
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _ShellScaffold oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.showOnboarding && widget.showOnboarding) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _startOnboarding());
+    }
+  }
+
+  void _startOnboarding() {
+    if (!mounted) return;
+    setState(() {
+      _onboardingVisible = true;
+      _onboardingStepIndex = 0;
+    });
+    ref.read(shellIndexProvider.notifier).state =
+        _onboardingSteps.first.navIndex;
+    ref.read(runSimulationActiveProvider.notifier).state = false;
+    _refreshOnboardingTarget();
+  }
+
+  void _refreshOnboardingTarget() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_onboardingVisible) return;
+      final step = _onboardingSteps[_onboardingStepIndex];
+      final key = _keyForOnboardingStep(step);
+      final targetContext = key.currentContext;
+      if (targetContext != null) {
+        Scrollable.ensureVisible(
+          targetContext,
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOutCubic,
+          alignment: 0.45,
+        ).then((_) {
+          if (mounted && _onboardingVisible) {
+            _measureOnboardingTarget(key);
+          }
+        });
+        return;
+      }
+
+      _measureOnboardingTarget(key);
+    });
+  }
+
+  void _measureOnboardingTarget(GlobalKey key) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_onboardingVisible) return;
+      final targetContext = key.currentContext;
+      final renderObject = targetContext?.findRenderObject();
+      if (renderObject is! RenderBox || !renderObject.hasSize) {
+        final isMobile = MediaQuery.of(context).size.width < 768;
+        setState(() {
+          _onboardingTargetRect = isMobile
+              ? const Rect.fromLTWH(14, 28, 44, 44)
+              : const Rect.fromLTWH(12, 116, 176, 42);
+        });
+        return;
+      }
+
+      final offset = renderObject.localToGlobal(Offset.zero);
+      setState(() {
+        _onboardingTargetRect = offset & renderObject.size;
+      });
+    });
+  }
+
+  GlobalKey _keyForOnboardingStep(_OnboardingStep step) {
+    return switch (step.target) {
+      _OnboardingTarget.classification => _classificationKey,
+      _OnboardingTarget.runSimulation => _runSimulationButtonKey,
+      _OnboardingTarget.downloadButton => _downloadButtonKey,
+      _ => _navTileKeys[step.navIndex],
+    };
+  }
+
+  void _goToOnboardingStep(int index) {
+    final safeIndex = index.clamp(0, _onboardingSteps.length - 1);
+    final step = _onboardingSteps[safeIndex];
+    ref.read(shellIndexProvider.notifier).state = step.navIndex;
+    final simState = ref.read(simulationRunStateProvider);
+    if (simState != SimulationRunState.running) {
+      ref.read(runSimulationActiveProvider.notifier).state = false;
+    }
+    setState(() {
+      _onboardingStepIndex = safeIndex;
+    });
+    _refreshOnboardingTarget();
+  }
+
+  void _nextOnboardingStep() {
+    if (_onboardingStepIndex >= _onboardingSteps.length - 1) {
+      setState(() {
+        _onboardingVisible = false;
+        _onboardingTargetRect = null;
+      });
+      return;
+    }
+    _goToOnboardingStep(_onboardingStepIndex + 1);
+  }
+
+  void _skipOnboarding() {
+    setState(() {
+      _onboardingVisible = false;
+      _onboardingTargetRect = null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final selectedIndex = ref.watch(shellIndexProvider);
     final isRunSim = ref.watch(runSimulationActiveProvider);
     final simState = ref.watch(simulationRunStateProvider);
@@ -161,10 +470,16 @@ class _ShellScaffold extends ConsumerWidget {
     } else {
       pageContent = switch (selectedIndex) {
         0 => const CommandCenterContent(),
-        1 => const SimulationSetupContent(),
+        1 => SimulationSetupContent(
+          classificationKey: _classificationKey,
+          runSimulationButtonKey: _runSimulationButtonKey,
+        ),
         2 => const AiActionPlanContent(),
         3 => const ResourceManagementContent(),
-        4 => const MasterActionPlanContent(),
+        4 => MasterActionPlanContent(
+          downloadButtonKey: _downloadButtonKey,
+          showDownloadPlaceholder: _onboardingVisible,
+        ),
         _ => const CommandCenterContent(),
       };
     }
@@ -180,15 +495,54 @@ class _ShellScaffold extends ConsumerWidget {
         children: [
           Row(
             children: [
-              if (!isMobile) _Sidebar(selectedIndex: selectedIndex),
+              if (!isMobile)
+                _Sidebar(
+                  selectedIndex: selectedIndex,
+                  navTileKeys: _navTileKeys,
+                ),
               Expanded(child: pageContent),
             ],
           ),
           if (settingsVisible) const _SettingsOverlay(),
+          if (_onboardingVisible)
+            _OnboardingOverlay(
+              step: _onboardingSteps[_onboardingStepIndex],
+              stepIndex: _onboardingStepIndex,
+              totalSteps: _onboardingSteps.length,
+              targetRect: _onboardingTargetRect,
+              onNext: _nextOnboardingStep,
+              onSkip: _skipOnboarding,
+              onTargetTap: _nextOnboardingStep,
+            ),
         ],
       ),
     );
   }
+}
+
+class _OnboardingStep {
+  final int navIndex;
+  final _OnboardingTarget target;
+  final IconData icon;
+  final String title;
+  final String body;
+
+  const _OnboardingStep({
+    required this.navIndex,
+    required this.target,
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
+}
+
+enum _OnboardingTarget {
+  commandCenter,
+  simulation,
+  classification,
+  runSimulation,
+  masterPlan,
+  downloadButton,
 }
 
 // -----------------------------------------------------------
@@ -200,7 +554,9 @@ const _kSidebarWidth = 200.0;
 
 class _Sidebar extends ConsumerWidget {
   final int selectedIndex;
-  const _Sidebar({required this.selectedIndex});
+  final List<GlobalKey>? navTileKeys;
+
+  const _Sidebar({required this.selectedIndex, this.navTileKeys});
 
   static const _navItems = [
     _NavItem(icon: Icons.grid_view_rounded, label: 'Command Center'),
@@ -210,10 +566,15 @@ class _Sidebar extends ConsumerWidget {
     _NavItem(icon: Icons.article_outlined, label: 'Master Plan'),
   ];
 
+  static int get navItemCount => _navItems.length;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authUserProvider);
-    final toastVisible = ref.watch(toastVisibleProvider);
+    final notifications = ref.watch(_sidebarNotificationsProvider);
+    final activeNotificationIndex = ref.watch(
+      activeSidebarNotificationIndexProvider,
+    );
     final isMobile = MediaQuery.of(context).size.width < 768;
 
     return Container(
@@ -237,6 +598,7 @@ class _Sidebar extends ConsumerWidget {
                 itemCount: _navItems.length,
                 itemBuilder: (context, i) {
                   return _NavTile(
+                    key: navTileKeys?[i],
                     item: _navItems[i],
                     isSelected: selectedIndex == i,
                     onTap: () {
@@ -256,11 +618,39 @@ class _Sidebar extends ConsumerWidget {
               ),
             ),
 
-            // --- Notification Toast ---
-            if (toastVisible)
-              _NotificationToast(
-                onDismiss: () =>
-                    ref.read(toastVisibleProvider.notifier).state = false,
+            // --- Notifications ---
+            if (notifications.isNotEmpty)
+              _NotificationCarousel(
+                notifications: notifications,
+                activeIndex: activeNotificationIndex,
+                onNext: () {
+                  ref
+                          .read(activeSidebarNotificationIndexProvider.notifier)
+                          .state =
+                      (activeNotificationIndex + 1) % notifications.length;
+                },
+                onDismiss: (id) {
+                  final dismissed = ref.read(dismissedNotificationIdsProvider);
+                  ref.read(dismissedNotificationIdsProvider.notifier).state = {
+                    ...dismissed,
+                    id,
+                  };
+                  if (activeNotificationIndex >= notifications.length - 1) {
+                    ref
+                            .read(
+                              activeSidebarNotificationIndexProvider.notifier,
+                            )
+                            .state =
+                        0;
+                  }
+                },
+                onOpen: (notification) {
+                  ref.read(shellIndexProvider.notifier).state =
+                      notification.targetIndex;
+                  if (Scaffold.of(context).isDrawerOpen) {
+                    Navigator.of(context).pop();
+                  }
+                },
               ),
 
             // --- Settings ---
@@ -315,6 +705,7 @@ class _NavTile extends StatelessWidget {
   final VoidCallback onTap;
 
   const _NavTile({
+    super.key,
     required this.item,
     required this.isSelected,
     required this.onTap,
@@ -331,7 +722,7 @@ class _NavTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
           decoration: BoxDecoration(
             color: isSelected
-                ? const Color(0xFF16A34A).withValues(alpha: 0.15)
+                ? const Color(0xFF1D4ED8).withValues(alpha: 0.15)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
           ),
@@ -341,7 +732,7 @@ class _NavTile extends StatelessWidget {
                 item.icon,
                 size: 17,
                 color: isSelected
-                    ? const Color(0xFF4ADE80)
+                    ? const Color(0xFF60A5FA)
                     : const Color(0xFF94A3B8),
               ),
               const SizedBox(width: 10),
@@ -372,6 +763,7 @@ class _BrandHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final displayName = user?.fullName.trim();
     final email = user?.email.trim();
+    final initials = user?.initials.isNotEmpty == true ? user!.initials : 'OP';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
@@ -381,15 +773,15 @@ class _BrandHeader extends StatelessWidget {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: const Color(0xFF16A34A),
+              color: const Color(0xFF1D4ED8),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Center(
+            child: Center(
               child: Text(
-                '#',
-                style: TextStyle(
+                initials,
+                style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 16,
+                  fontSize: 13,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -428,89 +820,454 @@ class _BrandHeader extends StatelessWidget {
   }
 }
 
-class _NotificationToast extends StatelessWidget {
-  final VoidCallback onDismiss;
-  const _NotificationToast({required this.onDismiss});
+// -----------------------------------------------------------
+// New Account Onboarding Overlay
+// -----------------------------------------------------------
+
+class _OnboardingOverlay extends StatelessWidget {
+  final _OnboardingStep step;
+  final int stepIndex;
+  final int totalSteps;
+  final Rect? targetRect;
+  final VoidCallback onNext;
+  final VoidCallback onSkip;
+  final VoidCallback onTargetTap;
+
+  const _OnboardingOverlay({
+    required this.step,
+    required this.stepIndex,
+    required this.totalSteps,
+    required this.targetRect,
+    required this.onNext,
+    required this.onSkip,
+    required this.onTargetTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(8),
+    final media = MediaQuery.of(context).size;
+    final target = targetRect ?? const Rect.fromLTWH(12, 116, 176, 42);
+    final ringDiameter = math.max(target.width, target.height) + 26;
+    final ringLeft = (target.center.dx - ringDiameter / 2)
+        .clamp(12.0, math.max(12.0, media.width - ringDiameter - 12))
+        .toDouble();
+    final ringTop = (target.center.dy - ringDiameter / 2)
+        .clamp(12.0, math.max(12.0, media.height - ringDiameter - 12))
+        .toDouble();
+    final panelWidth = media.width < 420 ? media.width - 32 : 340.0;
+    final placeRight = target.right + panelWidth + 24 < media.width;
+    final panelLeft = placeRight
+        ? target.right + 20
+        : (target.left - panelWidth - 20)
+              .clamp(16.0, math.max(16.0, media.width - panelWidth - 16))
+              .toDouble();
+    final panelTop = (target.top - 18)
+        .clamp(16.0, math.max(16.0, media.height - 258))
+        .toDouble();
+    final isLastStep = stepIndex == totalSteps - 1;
+
+    return Positioned.fill(
+      child: Material(
+        color: Colors.transparent,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () {},
+                child: Container(color: Colors.black.withValues(alpha: 0.48)),
+              ),
+            ),
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 420),
+              curve: Curves.easeInOutCubic,
+              left: ringLeft,
+              top: ringTop,
+              width: ringDiameter,
+              height: ringDiameter,
+              child: GestureDetector(
+                onTap: onTargetTap,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 420),
+                  curve: Curves.easeInOutCubic,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.08),
+                    border: Border.all(
+                      color: const Color(0xFF60A5FA),
+                      width: 3,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF1D4ED8).withValues(alpha: 0.35),
+                        blurRadius: 24,
+                        spreadRadius: 8,
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: 9,
+                      height: 9,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF60A5FA),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 420),
+              curve: Curves.easeInOutCubic,
+              left: panelLeft,
+              top: panelTop,
+              width: panelWidth,
+              child: _OnboardingCard(
+                key: ValueKey(stepIndex),
+                step: step,
+                stepIndex: stepIndex,
+                totalSteps: totalSteps,
+                isLastStep: isLastStep,
+                onNext: onNext,
+                onSkip: onSkip,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OnboardingCard extends StatelessWidget {
+  final _OnboardingStep step;
+  final int stepIndex;
+  final int totalSteps;
+  final bool isLastStep;
+  final VoidCallback onNext;
+  final VoidCallback onSkip;
+
+  const _OnboardingCard({
+    super.key,
+    required this.step,
+    required this.stepIndex,
+    required this.totalSteps,
+    required this.isLastStep,
+    required this.onNext,
+    required this.onSkip,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 240),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
       child: Container(
-        padding: const EdgeInsets.all(10),
+        key: ValueKey(stepIndex),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E293B),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFF334155)),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.18),
+              blurRadius: 26,
+              offset: const Offset(0, 12),
+            ),
+          ],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF16A34A),
-                    borderRadius: BorderRadius.circular(4),
+                    color: const Color(0xFF1D4ED8).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Text(
-                    'New',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
+                  child: Icon(
+                    step.icon,
+                    color: const Color(0xFF1D4ED8),
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Step ${stepIndex + 1} of $totalSteps',
+                    style: const TextStyle(
+                      color: Color(0xFF6B7280),
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: onDismiss,
-                  child: const Icon(
+                IconButton(
+                  tooltip: 'Skip tutorial',
+                  onPressed: onSkip,
+                  icon: const Icon(
                     Icons.close,
-                    size: 13,
+                    size: 18,
                     color: Color(0xFF64748B),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
-            const Text(
-              'Notifications sent here',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
+            const SizedBox(height: 12),
+            Text(
+              step.title,
+              style: const TextStyle(
+                color: Color(0xFF111827),
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
               ),
             ),
-            const SizedBox(height: 2),
-            const Text(
-              'This is a sample, check it out!',
-              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10),
+            const SizedBox(height: 8),
+            Text(
+              step.body,
+              style: const TextStyle(
+                color: Color(0xFF475569),
+                fontSize: 13,
+                height: 1.42,
+              ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 16),
             Row(
               children: [
-                const Text(
-                  'Try it out ',
-                  style: TextStyle(
-                    color: Color(0xFF16A34A),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
+                Expanded(
+                  child: Row(
+                    children: List.generate(totalSteps, (index) {
+                      final active = index == stepIndex;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 240),
+                        curve: Curves.easeOutCubic,
+                        width: active ? 22 : 7,
+                        height: 7,
+                        margin: const EdgeInsets.only(right: 5),
+                        decoration: BoxDecoration(
+                          color: active
+                              ? const Color(0xFF1D4ED8)
+                              : const Color(0xFFE2E8F0),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      );
+                    }),
                   ),
                 ),
-                const Icon(
-                  Icons.open_in_new,
-                  size: 10,
-                  color: Color(0xFF16A34A),
+                OutlinedButton(onPressed: onSkip, child: const Text('Skip')),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: onNext,
+                  icon: Icon(
+                    isLastStep
+                        ? Icons.check_rounded
+                        : Icons.arrow_forward_rounded,
+                    size: 16,
+                  ),
+                  label: Text(isLastStep ? 'Finish' : 'Next'),
                 ),
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NotificationCarousel extends StatelessWidget {
+  final List<_SidebarNotification> notifications;
+  final int activeIndex;
+  final VoidCallback onNext;
+  final ValueChanged<String> onDismiss;
+  final ValueChanged<_SidebarNotification> onOpen;
+
+  const _NotificationCarousel({
+    required this.notifications,
+    required this.activeIndex,
+    required this.onNext,
+    required this.onDismiss,
+    required this.onOpen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final safeIndex = activeIndex.clamp(0, notifications.length - 1);
+    final notification = notifications[safeIndex];
+
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: _NotificationCard(
+        notification: notification,
+        position: safeIndex + 1,
+        total: notifications.length,
+        onNext: onNext,
+        onDismiss: () => onDismiss(notification.id),
+        onOpen: () => onOpen(notification),
+      ),
+    );
+  }
+}
+
+class _NotificationCard extends StatelessWidget {
+  final _SidebarNotification notification;
+  final int position;
+  final int total;
+  final VoidCallback onNext;
+  final VoidCallback onDismiss;
+  final VoidCallback onOpen;
+
+  const _NotificationCard({
+    required this.notification,
+    required this.position,
+    required this.total,
+    required this.onNext,
+    required this.onDismiss,
+    required this.onOpen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onOpen,
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E293B),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFF334155)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: notification.color,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      notification.label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  if (total > 1)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Text(
+                        '$position/$total',
+                        style: const TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  Icon(notification.icon, size: 13, color: notification.color),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: onDismiss,
+                    child: const Icon(
+                      Icons.close,
+                      size: 13,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                notification.title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                notification.message,
+                style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            '${notification.actionLabel} ',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: notification.color,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.open_in_new,
+                          size: 10,
+                          color: notification.color,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (total > 1)
+                    InkWell(
+                      borderRadius: BorderRadius.circular(4),
+                      onTap: onNext,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 2,
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              'Next',
+                              style: TextStyle(
+                                color: notification.color,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            Icon(
+                              Icons.chevron_right,
+                              size: 12,
+                              color: notification.color,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -535,7 +1292,7 @@ class _SettingsOverlayState extends ConsumerState<_SettingsOverlay> {
   final _confirmPasswordController = TextEditingController();
   final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: 'https://acta-production.up.railway.app',
+      baseUrl: ApiConfig.baseUrl,
       connectTimeout: const Duration(seconds: 8),
       receiveTimeout: const Duration(seconds: 8),
     ),
@@ -629,7 +1386,7 @@ class _SettingsOverlayState extends ConsumerState<_SettingsOverlay> {
       _currentPasswordController.clear();
       _newPasswordController.clear();
       _confirmPasswordController.clear();
-      _showSnack('Password changed successfully.', const Color(0xFF16A34A));
+      _showSnack('Password changed successfully.', const Color(0xFF1D4ED8));
     } on DioException catch (e) {
       final detail =
           e.response?.data?['detail']?.toString() ?? 'Password update failed.';
@@ -780,12 +1537,12 @@ class _SettingsHeader extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: const Color(0xFF16A34A).withValues(alpha: 0.12),
+              color: const Color(0xFF1D4ED8).withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
               Icons.settings_outlined,
-              color: Color(0xFF16A34A),
+              color: Color(0xFF1D4ED8),
               size: 20,
             ),
           ),
@@ -847,7 +1604,7 @@ class _SettingsSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, size: 18, color: const Color(0xFF16A34A)),
+              Icon(icon, size: 18, color: const Color(0xFF1D4ED8)),
               const SizedBox(width: 8),
               Text(
                 title,
@@ -884,7 +1641,7 @@ class _AccountDetailsSection extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 24,
-              backgroundColor: const Color(0xFF16A34A),
+              backgroundColor: const Color(0xFF1D4ED8),
               child: Text(
                 user?.initials.isNotEmpty == true ? user!.initials : 'OP',
                 style: const TextStyle(
@@ -1243,7 +2000,7 @@ class _SettingsSwitchRow extends StatelessWidget {
           ),
           Switch(
             value: value,
-            activeThumbColor: const Color(0xFF16A34A),
+            activeThumbColor: const Color(0xFF1D4ED8),
             onChanged: onChanged,
           ),
         ],
@@ -1266,10 +2023,10 @@ class _StatusRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = isChecking
-        ? const Color(0xFFF59E0B)
+        ? const Color(0xFF2563EB)
         : healthy
-        ? const Color(0xFF16A34A)
-        : const Color(0xFFDC2626);
+        ? const Color(0xFF0EA5E9)
+        : const Color(0xFF1E3A8A);
     final text = isChecking
         ? 'Checking'
         : healthy

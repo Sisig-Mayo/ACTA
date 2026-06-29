@@ -133,6 +133,7 @@ documentation.</p>
 ├── windows/                     # Flutter Windows runner
 ├── lib/                         # Flutter application code
 │   ├── assets/
+│   ├── config/
 │   ├── models/
 │   ├── utils/
 │   └── views/
@@ -164,13 +165,16 @@ documentation.</p>
 <p><code>lib/main.dart</code></p>
 <p>: Initializes <code>ProviderScope</code>, configures the ACTA dark theme, and starts at
   <code>LoginScreen</code>.</p>
+<p><code>lib/config/</code></p>
+<p>: Contains frontend runtime configuration such as <code>ApiConfig.baseUrl</code>.</p>
 <p><code>lib/views/</code></p>
 <p>: Contains operator-facing screens such as login, command center, simulation
   setup, run status, AI action plans, master action plans, and resource
   management.</p>
 <p><code>lib/models/</code></p>
 <p>: Contains frontend state and data models for simulation, barangays, and user
-  profile handling.</p>
+  profile handling. <code>demo_simulation.dart</code> contains the explicit local demo
+  result used for prototype walkthroughs when the backend is unavailable.</p>
 <p><code>lib/utils/</code></p>
 <p>: Contains utility code such as cross-platform PDF download handling.</p>
 <h2 id="backend">Backend<a class="headerlink" href="#backend" title="Permanent link">&para;</a></h2>

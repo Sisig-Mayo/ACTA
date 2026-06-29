@@ -20,7 +20,7 @@ The context document contains five sections:
 
 | Section | Content |
 | --- | --- |
-| Basic parameters | Wind speed, precipitation, preparation window, storm track, storm radius. |
+| Basic parameters | Wind speed, precipitation, preparation window, storm track, and backend storm radius. |
 | Simulation results | Severity tier, zone counts, top-risk barangays, red-zone list. |
 | Infrastructure status | Pumping stations and drainage gates when available. |
 | Template action tasks | Time-decayed baseline tasks generated before LLM refinement. |

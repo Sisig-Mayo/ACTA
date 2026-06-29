@@ -27,7 +27,12 @@ class UserProfile {
   }
 
   String get fullName => '$firstName $lastName';
-  String get initials => '${firstName.isNotEmpty ? firstName[0] : ''}${lastName.isNotEmpty ? lastName[0] : ''}'.toUpperCase();
+  String get initials {
+    final trimmedFirstName = firstName.trim();
+    final trimmedLastName = lastName.trim();
+    return '${trimmedFirstName.isNotEmpty ? trimmedFirstName[0] : ''}${trimmedLastName.isNotEmpty ? trimmedLastName[0] : ''}'
+        .toUpperCase();
+  }
 }
 
 /// Global provider for the logged-in user profile.

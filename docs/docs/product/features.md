@@ -11,8 +11,9 @@ plan.
 | Capability | What operators can do | Current implementation |
 | --- | --- | --- |
 | Command Center | Review Manila flood risk, operational indicators, alerts, and priority areas from a single dashboard. | Implemented in Flutter with barangay map rendering and baseline/static operational data. |
-| Simulation Setup | Configure a hazard scenario with wind speed, 24-hour rainfall, preparation window, storm track, and storm radius. | Implemented for hydrologic flood simulations. Earthquake and virus outbreak are selectable profiles but do not yet have dedicated backend risk models. |
+| Simulation Setup | Configure a hazard scenario with wind speed, 24-hour rainfall, preparation window, and storm track assumptions. | Implemented for hydrologic flood simulations with a guarded submit state to prevent duplicate starts. Earthquake and virus outbreak are visible but disabled until dedicated backend risk models exist. The backend still supports `storm_radius_km`, but the current frontend uses its default rather than exposing it as a separate operator control. |
 | Async Simulation Runs | Submit a scenario and monitor progress while the backend computes risk and action data. | Implemented through `POST /api/v1/simulation/run`, status polling, and stored `simulation_runs` records. |
+| Prototype Demo Result | Continue a live presentation even if the network or backend is unavailable. | Implemented as an explicit `Use Demo Result` action in Simulation Setup. It loads local representative flood output and does not call backend APIs. |
 | Barangay Risk Scoring | Classify impacted barangays into green, yellow, and red zones. | Implemented through the risk pipeline and `barangay_risk_scores`; UI currently maps stored risk scores into impact rows. |
 | Time-Decayed Tasks | Generate task deadlines based on the remaining preparation window. | Implemented through the decay engine and included in simulation results. |
 | AI Action Planning | Turn simulation inputs, risk scores, infrastructure state, and template tasks into a structured action plan. | Implemented with Gemini when configured, with a deterministic fallback when the LLM is unavailable. |
@@ -36,6 +37,10 @@ plan.
 6. The operator finalizes the Master Action Plan, exports a PDF, and dispatches
    the plan through the backend dispatch hook.
 
+For competition or offline demos, the operator can choose **Use Demo Result** in
+Simulation Setup. This bypasses the backend and loads `lib/models/demo_simulation.dart`
+so the AI Action Plan and Master Action Plan screens remain available.
+
 ## What Makes The System Useful
 
 - **Spatial grounding:** decisions are tied to Manila barangay boundaries,
@@ -50,6 +55,8 @@ plan.
   approval, and dispatch instead of stopping at a model response.
 - **Fallback behavior:** deterministic templates keep the workflow usable when
   Gemini is not configured or fails.
+- **Demo resilience:** a local demo result keeps the prototype walkthrough
+  presentable when external services are slow or unreachable.
 
 ## Current Gaps And Improvement Targets
 
@@ -62,6 +69,7 @@ plan.
 | Dispatch auditability | Dispatch returns a manifest, but long-term tracking is not yet explicit in docs or UI. | Store dispatch events with recipient, timestamp, status, and plan version for audit and incident review. |
 | Settings and account recovery | Settings and password reset entry points are present but not implemented as complete workflows. | Add implemented screens or disable controls until the workflows exist. |
 | Real telemetry | The data pipeline can ingest hazard data, but operator-facing freshness and source status are not prominent. | Surface last-ingested timestamps and data source health in the Command Center. |
+| Demo data boundary | The prototype demo result is intentionally local and representative, not a persisted simulation run. | Keep the `Use Demo Result` action clearly labeled, and avoid mixing demo output with production analytics or dispatch audits. |
 
 ## Near-Term Product Priorities
 

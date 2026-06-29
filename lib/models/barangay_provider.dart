@@ -10,6 +10,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../config/api_config.dart';
+
 // -----------------------------------------------------------
 // Data Model
 // -----------------------------------------------------------
@@ -32,13 +34,16 @@ class BarangayPolygon {
 // Provider — Cached fetch of all barangay polygons
 // -----------------------------------------------------------
 
-final barangayPolygonsProvider =
-    FutureProvider<List<BarangayPolygon>>((ref) async {
-  final dio = Dio(BaseOptions(
-    baseUrl: 'https://acta-production.up.railway.app',
-    connectTimeout: const Duration(seconds: 60),
-    receiveTimeout: const Duration(seconds: 30),
-  ));
+final barangayPolygonsProvider = FutureProvider<List<BarangayPolygon>>((
+  ref,
+) async {
+  final dio = Dio(
+    BaseOptions(
+      baseUrl: ApiConfig.baseUrl,
+      connectTimeout: const Duration(seconds: 60),
+      receiveTimeout: const Duration(seconds: 30),
+    ),
+  );
 
   try {
     final response = await dio.get('/api/v1/barangays/geojson');
@@ -77,12 +82,9 @@ final barangayPolygonsProvider =
       }
 
       if (rings.isNotEmpty) {
-        polygons.add(BarangayPolygon(
-          id: id,
-          name: name,
-          district: district,
-          rings: rings,
-        ));
+        polygons.add(
+          BarangayPolygon(id: id, name: name, district: district, rings: rings),
+        );
       }
     }
 
@@ -152,7 +154,6 @@ List<Polygon> buildBarangayMapPolygons(
       color: fillColor,
       borderColor: borderColor,
       borderStrokeWidth: 1.0,
-      isFilled: true,
     );
   }).toList();
 }

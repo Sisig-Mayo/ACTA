@@ -7,6 +7,8 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'simulation_models.dart';
+import '../config/wind_presets.dart';
+import '../config/rainfall_presets.dart';
 
 // -----------------------------------------------------------
 // Enums
@@ -31,6 +33,16 @@ extension SimProfileLabel on SimProfile {
 /// Currently selected simulation profile.
 final simProfileProvider =
     StateProvider<SimProfile>((ref) => SimProfile.hydrologicFlood);
+
+/// Currently selected TCWS wind signal preset.
+/// Default: Signal 1 (50 km/h).
+final windPresetProvider =
+    StateProvider<WindPreset>((ref) => defaultWindPreset);
+
+/// Currently selected rainfall intensity preset.
+/// Default: Heavy (75 mm).
+final rainfallPresetProvider =
+    StateProvider<RainfallPreset>((ref) => defaultRainfallPreset);
 
 /// Simulation run lifecycle state.
 final simulationRunStateProvider =

@@ -63,6 +63,26 @@ JSON serialization, and Riverpod code generation.
 
 The app enables Material support and includes assets from `lib/assets/`.
 
+## Frontend API Base URL
+
+The Flutter app centralizes the backend base URL in `lib/config/api_config.dart`.
+By default, frontend API calls use the deployed ACTA backend:
+
+```text
+https://acta-production.up.railway.app
+```
+
+Override the base URL with Dart defines when running locally or building for a
+different deployment:
+
+```sh
+flutter run -d chrome --dart-define=ACTA_API_BASE_URL=http://localhost:8000
+flutter build web --dart-define=ACTA_API_BASE_URL=https://api.example.com
+```
+
+All frontend Dio clients should use `ApiConfig.baseUrl` rather than duplicating
+literal URLs in screens, providers, or utilities.
+
 ## Backend Package
 
 `backend/requirements.txt` defines Python dependencies for:

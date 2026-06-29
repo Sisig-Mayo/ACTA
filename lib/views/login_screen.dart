@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
 
+import '../config/api_config.dart';
 import '../models/user_profile.dart';
 import '../utils/auth_storage.dart';
 import 'app_shell.dart';
@@ -29,7 +30,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: 'https://acta-production.up.railway.app',
+      baseUrl: ApiConfig.baseUrl,
       connectTimeout: const Duration(seconds: 60),
       receiveTimeout: const Duration(seconds: 30),
     ),
@@ -119,7 +120,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           );
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const AppShell()),
+            MaterialPageRoute(
+              builder: (context) => const AppShell(showOnboarding: true),
+            ),
           );
         }
       }

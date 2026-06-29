@@ -51,9 +51,15 @@ The frontend uses:
 - `google_fonts` for typography.
 - `json_annotation` tooling for structured models.
 
-Several frontend files currently use `http://localhost:8000` directly as the
-backend base URL. Replace those constants with environment-specific
-configuration before deploying beyond local development.
+Frontend API clients use `ApiConfig.baseUrl` from `lib/config/api_config.dart`.
+The default points at the deployed ACTA backend and can be overridden with the
+`ACTA_API_BASE_URL` Dart define for local development, staging, or alternate
+deployments.
+
+Simulation Setup also includes an explicit prototype fallback path. The `Use
+Demo Result` action loads `lib/models/demo_simulation.dart`, populates the same
+Riverpod result providers used by completed backend runs, and navigates to the
+AI Action Plan without calling backend APIs.
 
 ## Backend
 
@@ -104,6 +110,9 @@ The simulation pipeline starts from `POST /api/v1/simulation/run`:
 7. Assemble a five-section LLM context document.
 8. Ask Gemini to refine the action plan, or use the fallback template response.
 9. Store results, explainability data, LLM output, and context snapshots.
+
+The local demo result path is outside this backend pipeline. It is presentation
+support only and should not be treated as a stored `simulation_runs` record.
 
 ## LLM Boundary
 
