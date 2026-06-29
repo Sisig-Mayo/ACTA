@@ -162,11 +162,14 @@ class _ShellScaffold extends ConsumerWidget {
       };
     }
 
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
+      drawer: isMobile ? Drawer(child: _Sidebar(selectedIndex: selectedIndex)) : null,
       body: Row(
         children: [
-          _Sidebar(selectedIndex: selectedIndex),
+          if (!isMobile) _Sidebar(selectedIndex: selectedIndex),
           Expanded(child: pageContent),
         ],
       ),
@@ -197,42 +200,47 @@ class _Sidebar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authUserProvider);
     final toastVisible = ref.watch(toastVisibleProvider);
+    final isMobile = MediaQuery.of(context).size.width < 768;
 
     return Container(
-      width: _kSidebarWidth,
+      width: isMobile ? 240 : _kSidebarWidth,
       color: _kSidebarBg,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // --- Brand / User ---
-          _BrandHeader(user: user),
-
-          const SizedBox(height: 8),
-          const Divider(color: Color(0xFF1E293B), height: 1),
-          const SizedBox(height: 8),
-
-          // --- Nav Items ---
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              itemCount: _navItems.length,
-              itemBuilder: (context, i) {
-                return _NavTile(
-                  item: _navItems[i],
-                  isSelected: selectedIndex == i,
-                  onTap: () {
-                    ref.read(shellIndexProvider.notifier).state = i;
-                    // Only reset run sim flag if the simulation is NOT running
-                    final simState = ref.read(simulationRunStateProvider);
-                    if (simState != SimulationRunState.running) {
-                      ref.read(runSimulationActiveProvider.notifier).state =
-                          false;
-                    }
-                  },
-                );
-              },
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // --- Brand / User ---
+            _BrandHeader(user: user),
+  
+            const SizedBox(height: 8),
+            const Divider(color: Color(0xFF1E293B), height: 1),
+            const SizedBox(height: 8),
+  
+            // --- Nav Items ---
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                itemCount: _navItems.length,
+                itemBuilder: (context, i) {
+                  return _NavTile(
+                    item: _navItems[i],
+                    isSelected: selectedIndex == i,
+                    onTap: () {
+                      ref.read(shellIndexProvider.notifier).state = i;
+                      // Only reset run sim flag if the simulation is NOT running
+                      final simState = ref.read(simulationRunStateProvider);
+                      if (simState != SimulationRunState.running) {
+                        ref.read(runSimulationActiveProvider.notifier).state =
+                            false;
+                      }
+                      if (Scaffold.of(context).isDrawerOpen) {
+                        Navigator.of(context).pop();
+                      }
+                    },
+                  );
+                },
+              ),
             ),
-          ),
 
           // --- Notification Toast ---
           if (toastVisible) _NotificationToast(
@@ -267,7 +275,7 @@ class _Sidebar extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
         ],
-      ),
+      )),
     );
   }
 }
@@ -489,40 +497,61 @@ class PageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
     return Container(
-      padding: const EdgeInsets.fromLTRB(28, 20, 20, 16),
+      padding: EdgeInsets.fromLTRB(isMobile ? 16 : 28, 20, 16, 16),
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB))),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF111827),
-                  ),
+          Row(
+            children: [
+              if (isMobile) ...[
+                IconButton(
+                  icon: const Icon(Icons.menu),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF6B7280),
-                  ),
-                ),
+                const SizedBox(width: 8),
               ],
-            ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF111827),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (!isMobile && actions.isNotEmpty) ...[
+                const SizedBox(width: 16),
+                ...actions,
+              ],
+            ],
           ),
-          if (actions.isNotEmpty) ...[
-            const SizedBox(width: 16),
-            ...actions,
+          if (isMobile && actions.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: actions,
+            ),
           ],
         ],
       ),

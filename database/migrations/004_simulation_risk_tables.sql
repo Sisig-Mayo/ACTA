@@ -134,9 +134,12 @@ COMMENT ON TABLE road_network IS
 -- 4. Auto-update Timestamp Trigger
 -- -----------------------------------------------------------
 
-CREATE TRIGGER IF NOT EXISTS trg_simulation_runs_updated_at
-    BEFORE UPDATE ON simulation_runs
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS trg_simulation_runs_updated_at ON simulation_runs;
+
+CREATE TRIGGER trg_simulation_runs_updated_at
+BEFORE UPDATE ON simulation_runs
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
 
 -- -----------------------------------------------------------
 -- 5. Row Level Security (RLS)
