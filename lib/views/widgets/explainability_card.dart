@@ -39,7 +39,7 @@ class ExplainabilityCardWidget extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: const Color(0xFF00BFA6).withValues(alpha: 0.2),
+          color: const Color(0xFF0091FF).withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -59,13 +59,13 @@ class ExplainabilityCardWidget extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00BFA6).withValues(alpha: 0.12),
+                    color: const Color(0xFF0091FF).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
                     Icons.auto_awesome,
                     size: 16,
-                    color: Color(0xFF00BFA6),
+                    color: Color(0xFF0091FF),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -84,7 +84,7 @@ class ExplainabilityCardWidget extends StatelessWidget {
                         'AI-Generated Analysis',
                         style: TextStyle(
                           fontSize: 10,
-                          color: Color(0xFF00BFA6),
+                          color: Color(0xFF0091FF),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -124,7 +124,7 @@ class ExplainabilityCardWidget extends StatelessWidget {
                   icon: Icons.summarize_outlined,
                   title: 'Executive Summary',
                   content: card.summary,
-                  accentColor: const Color(0xFF00BFA6),
+                  accentColor: const Color(0xFF00D2FF),
                 ),
                 const SizedBox(height: 16),
 
@@ -133,7 +133,7 @@ class ExplainabilityCardWidget extends StatelessWidget {
                   icon: Icons.warning_amber_rounded,
                   title: 'Risk Narrative',
                   content: card.riskNarrative,
-                  accentColor: const Color(0xFFFFB74D),
+                  accentColor: const Color(0xFF0091FF),
                 ),
                 const SizedBox(height: 16),
 
@@ -142,7 +142,7 @@ class ExplainabilityCardWidget extends StatelessWidget {
                   icon: Icons.psychology_outlined,
                   title: 'Action Rationale',
                   content: card.actionRationale,
-                  accentColor: const Color(0xFF26C6DA),
+                  accentColor: const Color(0xFF82B1FF),
                 ),
                 const SizedBox(height: 16),
 
