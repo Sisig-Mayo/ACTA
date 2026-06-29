@@ -32,8 +32,98 @@
 
   <title>ACTA</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      background: #ffffff;
+    }
+
+    .app-loader {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: #ffffff;
+      z-index: 9999;
+      transition: opacity 180ms ease;
+    }
+
+    .app-loader--hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .app-loader__content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #111827;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .app-loader__logo {
+      width: 112px;
+      height: 112px;
+      object-fit: contain;
+      animation: logo-float 2400ms ease-in-out infinite alternate;
+    }
+
+    .app-loader__bar {
+      width: 190px;
+      height: 5px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e5e7eb;
+    }
+
+    .app-loader__bar::before {
+      content: "";
+      display: block;
+      width: 42%;
+      height: 100%;
+      border-radius: inherit;
+      background: #13587a;
+      animation: loader-slide 1200ms ease-in-out infinite;
+    }
+
+    @keyframes logo-float {
+      from {
+        transform: translateY(-8px);
+      }
+
+      to {
+        transform: translateY(8px);
+      }
+    }
+
+    @keyframes loader-slide {
+      0% {
+        transform: translateX(-100%);
+      }
+
+      100% {
+        transform: translateX(240%);
+      }
+    }
+  </style>
 </head>
 <body>
+  <div id="app-loader" class="app-loader" aria-label="Loading ACTA">
+    <div class="app-loader__content">
+      <img
+        class="app-loader__logo"
+        src="assets/lib/assets/logo-1.png"
+        alt="ACTA"
+      >
+      <div class="app-loader__bar" aria-hidden="true"></div>
+      <div>Preparing ACTA...</div>
+    </div>
+  </div>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
@@ -42,6 +132,16 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      var loader = document.getElementById('app-loader');
+      if (!loader) return;
+      loader.classList.add('app-loader--hidden');
+      window.setTimeout(function () {
+        loader.remove();
+      }, 220);
+    });
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
