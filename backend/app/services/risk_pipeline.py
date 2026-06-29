@@ -197,16 +197,16 @@ async def run_simulation_pipeline(
 
 
 async def _fetch_all_barangay_geometries() -> list[dict[str, Any]]:
-    """Fetch ID, name, district, and GeoJSON geometry for all barangays."""
+    """Fetch ID, name, district, and cached GeoJSON from materialized view."""
     pool = await _get_pool()
     query = """
         SELECT
-            id,
+            barangay_id AS id,
             barangay_name,
             district,
             population,
-            ST_AsGeoJSON(geom) AS geom_geojson
-        FROM barangays;
+            geom_geojson_simplified AS geom_geojson
+        FROM mv_barangay_exposure_summary;
     """
     try:
         async with pool.acquire() as conn:
@@ -223,8 +223,34 @@ async def _fetch_all_barangay_geometries() -> list[dict[str, Any]]:
             for row in rows
         ]
     except Exception as e:
-        logger.error("Failed to fetch barangay geometries: %s", e)
-        raise
+        logger.error("Failed to fetch barangay exposure summaries: %s", e)
+        # Fallback to the raw table if MV doesn't exist yet
+        logger.warning("Falling back to raw barangays table...")
+        fallback_query = """
+            SELECT
+                id,
+                barangay_name,
+                district,
+                population,
+                ST_AsGeoJSON(geom) AS geom_geojson
+            FROM barangays;
+        """
+        try:
+            async with pool.acquire() as conn:
+                rows = await conn.fetch(fallback_query)
+            return [
+                {
+                    "id": row["id"],
+                    "barangay_name": row["barangay_name"],
+                    "district": row["district"],
+                    "population": row.get("population", 0),
+                    "geom_geojson": row["geom_geojson"],
+                }
+                for row in rows
+            ]
+        except Exception as e2:
+            logger.error("Fallback fetch also failed: %s", e2)
+            raise
 
 
 async def _apply_flood_modifiers(run_id: str) -> None:
