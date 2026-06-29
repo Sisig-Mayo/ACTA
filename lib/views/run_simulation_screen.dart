@@ -236,15 +236,15 @@ class _RunSimulationContentState extends ConsumerState<RunSimulationContent> {
                     padding: const EdgeInsets.all(16),
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFEE2E2),
+                      color: const Color(0xFFEFF6FF),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFDC2626)),
+                      border: Border.all(color: const Color(0xFF1E3A8A)),
                     ),
                     child: Row(
                       children: [
                         const Icon(
                           Icons.error_outline,
-                          color: Color(0xFFDC2626),
+                          color: Color(0xFF1E3A8A),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -252,7 +252,7 @@ class _RunSimulationContentState extends ConsumerState<RunSimulationContent> {
                             ref.watch(simulationErrorProvider) ??
                                 'An error occurred',
                             style: const TextStyle(
-                              color: Color(0xFFDC2626),
+                              color: Color(0xFF1E3A8A),
                               fontSize: 13,
                             ),
                           ),
@@ -314,7 +314,7 @@ class _StepperBar extends StatelessWidget {
                     width: 24,
                     height: 24,
                     decoration: const BoxDecoration(
-                      color: Color(0xFF16A34A),
+                      color: Color(0xFF1D4ED8),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -328,7 +328,7 @@ class _StepperBar extends StatelessWidget {
                     width: 24,
                     height: 24,
                     decoration: const BoxDecoration(
-                      color: Color(0xFF16A34A),
+                      color: Color(0xFF1D4ED8),
                       shape: BoxShape.circle,
                     ),
                     child: Center(
@@ -373,7 +373,7 @@ class _StepperBar extends StatelessWidget {
                             height: 2,
                             margin: const EdgeInsets.symmetric(horizontal: 4),
                             color: isDone
-                                ? const Color(0xFF16A34A)
+                                ? const Color(0xFF1D4ED8)
                                 : const Color(0xFFE5E7EB),
                           ),
                         ),
@@ -418,7 +418,7 @@ class _StepperBar extends StatelessWidget {
               width: 28,
               height: 28,
               decoration: const BoxDecoration(
-                color: Color(0xFF16A34A),
+                color: Color(0xFF1D4ED8),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.check, color: Colors.white, size: 14),
@@ -428,9 +428,9 @@ class _StepperBar extends StatelessWidget {
               width: 28,
               height: 28,
               decoration: BoxDecoration(
-                color: const Color(0xFF16A34A),
+                color: const Color(0xFF1D4ED8),
                 shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFF16A34A), width: 2),
+                border: Border.all(color: const Color(0xFF1D4ED8), width: 2),
               ),
               child: Center(
                 child: Text(
@@ -489,7 +489,7 @@ class _StepperBar extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 10,
                             color: isActive
-                                ? const Color(0xFF16A34A)
+                                ? const Color(0xFF1D4ED8)
                                 : const Color(0xFF9CA3AF),
                           ),
                         ),
@@ -604,7 +604,7 @@ class _MapCard extends StatelessWidget {
                     backgroundColor: const Color(0xFFE5E7EB),
                     valueColor: AlwaysStoppedAnimation<Color>(
                       progressPct >= 100
-                          ? const Color(0xFF16A34A)
+                          ? const Color(0xFF1D4ED8)
                           : const Color(0xFF0EA5E9),
                     ),
                   );
@@ -858,7 +858,7 @@ class _ModelProgressCard extends StatelessWidget {
 
   Widget _progressRow(String label, bool isDone, bool isActive) {
     final color = isDone
-        ? const Color(0xFF16A34A)
+        ? const Color(0xFF1D4ED8)
         : isActive
         ? const Color(0xFF0EA5E9)
         : const Color(0xFF9CA3AF);
