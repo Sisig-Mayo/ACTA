@@ -16,6 +16,7 @@ import 'models/user_profile.dart';
 import 'utils/auth_storage.dart';
 import 'views/login_screen.dart';
 import 'views/app_shell.dart';
+import 'views/widgets/brand_loading_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,10 +40,10 @@ class ActaApp extends StatelessWidget {
 
   /// Premium dark theme with custom color palette.
   ThemeData _buildDarkTheme() {
-    const primaryColor = Color(0xFF00BFA6);     // Teal accent
-    const surfaceColor = Color(0xFF1A1D23);     // Deep charcoal
-    const cardColor = Color(0xFF22262E);        // Elevated surface
-    const errorColor = Color(0xFFFF5252);       // Alert red
+    const primaryColor = Color(0xFF00BFA6); // Teal accent
+    const surfaceColor = Color(0xFF1A1D23); // Deep charcoal
+    const cardColor = Color(0xFF22262E); // Elevated surface
+    const errorColor = Color(0xFFFF5252); // Alert red
 
     return ThemeData(
       useMaterial3: true,
@@ -58,9 +59,7 @@ class ActaApp extends StatelessWidget {
       ),
       scaffoldBackgroundColor: const Color(0xFF12141A),
       cardColor: cardColor,
-      textTheme: GoogleFonts.interTextTheme(
-        ThemeData.dark().textTheme,
-      ),
+      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
       appBarTheme: AppBarTheme(
         backgroundColor: surfaceColor,
         elevation: 0,
@@ -107,7 +106,10 @@ class ActaApp extends StatelessWidget {
           borderSide: const BorderSide(color: primaryColor, width: 2),
         ),
         labelStyle: const TextStyle(color: Color(0xFF9CA3AF)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
       ),
     );
   }
@@ -130,11 +132,13 @@ class _AuthGate extends ConsumerStatefulWidget {
 class _AuthGateState extends ConsumerState<_AuthGate> {
   bool _checking = true;
 
-  final Dio _dio = Dio(BaseOptions(
-    baseUrl: 'https://acta-production.up.railway.app',
-    connectTimeout: const Duration(seconds: 60),
-    receiveTimeout: const Duration(seconds: 5),
-  ));
+  final Dio _dio = Dio(
+    BaseOptions(
+      baseUrl: 'https://acta-production.up.railway.app',
+      connectTimeout: const Duration(seconds: 60),
+      receiveTimeout: const Duration(seconds: 5),
+    ),
+  );
 
   @override
   void initState() {
@@ -154,16 +158,16 @@ class _AuthGateState extends ConsumerState<_AuthGate> {
       // Validate the token against the backend
       final response = await _dio.get(
         '/api/v1/auth/me',
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       if (response.statusCode == 200) {
         final userData = response.data as Map<String, dynamic>;
         // Restore user state
-        ref.read(authUserProvider.notifier).state =
-            UserProfile.fromJson(userData, token);
+        ref.read(authUserProvider.notifier).state = UserProfile.fromJson(
+          userData,
+          token,
+        );
 
         if (mounted) {
           Navigator.of(context).pushReplacement(
@@ -183,12 +187,7 @@ class _AuthGateState extends ConsumerState<_AuthGate> {
   @override
   Widget build(BuildContext context) {
     if (_checking) {
-      // Show a loading indicator while validating the session
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const BrandLoadingScreen();
     }
     return const LoginScreen();
   }

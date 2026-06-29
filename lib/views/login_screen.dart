@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import '../models/user_profile.dart';
 import '../utils/auth_storage.dart';
 import 'app_shell.dart';
+import 'widgets/brand_loading_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -20,17 +21,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordController = TextEditingController();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
-  
+
   bool _isLoginMode = true;
   bool _obscurePassword = true;
   bool _rememberMe = false;
   bool _isLoading = false;
 
-  final Dio _dio = Dio(BaseOptions(
-    baseUrl: 'https://acta-production.up.railway.app',
-    connectTimeout: const Duration(seconds: 60),
-    receiveTimeout: const Duration(seconds: 30),
-  ));
+  final Dio _dio = Dio(
+    BaseOptions(
+      baseUrl: 'https://acta-production.up.railway.app',
+      connectTimeout: const Duration(seconds: 60),
+      receiveTimeout: const Duration(seconds: 30),
+    ),
+  );
 
   @override
   void dispose() {
@@ -66,7 +69,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         await AuthStorage.saveToken(token);
 
         // Set state in provider
-        ref.read(authUserProvider.notifier).state = UserProfile.fromJson(userData, token);
+        ref.read(authUserProvider.notifier).state = UserProfile.fromJson(
+          userData,
+          token,
+        );
 
         if (mounted) {
           Navigator.of(context).pushReplacement(
@@ -100,7 +106,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         // Persist token so session survives page refresh
         await AuthStorage.saveToken(token);
 
-        ref.read(authUserProvider.notifier).state = UserProfile.fromJson(userData, token);
+        ref.read(authUserProvider.notifier).state = UserProfile.fromJson(
+          userData,
+          token,
+        );
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -115,13 +124,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         }
       }
     } on DioException catch (e) {
-      final errorMsg = e.response?.data?['detail']?.toString() ?? 'Connection error: ${e.message}';
+      final errorMsg =
+          e.response?.data?['detail']?.toString() ??
+          'Connection error: ${e.message}';
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMsg),
-            backgroundColor: Colors.redAccent,
-          ),
+          SnackBar(content: Text(errorMsg), backgroundColor: Colors.redAccent),
         );
       }
     } catch (e) {
@@ -172,7 +180,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           borderRadius: BorderRadius.circular(6),
           borderSide: const BorderSide(color: Colors.red, width: 1.5),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         hintStyle: GoogleFonts.inter(
           color: const Color(0xFF9CA3AF),
           fontSize: 14,
@@ -200,7 +211,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     return Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.shield, color: Color(0xFF13587A), size: 40),
+                        const Icon(
+                          Icons.shield,
+                          color: Color(0xFF13587A),
+                          size: 40,
+                        ),
                         const SizedBox(width: 12),
                         Text(
                           'ACTA',
@@ -219,7 +234,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               // Centered Main Content
               Center(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 40,
+                  ),
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 400),
                     child: Form(
@@ -257,7 +275,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                           // Subtitle
                           Text(
-                            _isLoginMode ? 'Please log in to continue' : 'Please register to continue',
+                            _isLoginMode
+                                ? 'Please log in to continue'
+                                : 'Please register to continue',
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               color: const Color(0xFF6B7280),
@@ -270,13 +290,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             TextFormField(
                               controller: _firstNameController,
                               keyboardType: TextInputType.name,
-                              style: GoogleFonts.inter(color: const Color(0xFF111827)),
+                              style: GoogleFonts.inter(
+                                color: const Color(0xFF111827),
+                              ),
                               decoration: const InputDecoration(
-                                prefixIcon: Icon(Icons.person_outline, size: 20),
+                                prefixIcon: Icon(
+                                  Icons.person_outline,
+                                  size: 20,
+                                ),
                                 hintText: 'First Name',
                               ),
                               validator: (value) {
-                                if (!_isLoginMode && (value == null || value.trim().isEmpty)) {
+                                if (!_isLoginMode &&
+                                    (value == null || value.trim().isEmpty)) {
                                   return 'Please enter your first name';
                                 }
                                 return null;
@@ -286,13 +312,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             TextFormField(
                               controller: _lastNameController,
                               keyboardType: TextInputType.name,
-                              style: GoogleFonts.inter(color: const Color(0xFF111827)),
+                              style: GoogleFonts.inter(
+                                color: const Color(0xFF111827),
+                              ),
                               decoration: const InputDecoration(
-                                prefixIcon: Icon(Icons.person_outline, size: 20),
+                                prefixIcon: Icon(
+                                  Icons.person_outline,
+                                  size: 20,
+                                ),
                                 hintText: 'Last Name',
                               ),
                               validator: (value) {
-                                if (!_isLoginMode && (value == null || value.trim().isEmpty)) {
+                                if (!_isLoginMode &&
+                                    (value == null || value.trim().isEmpty)) {
                                   return 'Please enter your last name';
                                 }
                                 return null;
@@ -305,7 +337,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
-                            style: GoogleFonts.inter(color: const Color(0xFF111827)),
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF111827),
+                            ),
                             decoration: const InputDecoration(
                               prefixIcon: Icon(Icons.email_outlined, size: 20),
                               hintText: 'juan.reyes@gmail.com',
@@ -314,7 +348,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               if (value == null || value.trim().isEmpty) {
                                 return 'Please enter your email';
                               }
-                              if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(value.trim())) {
+                              if (!RegExp(
+                                r'^[^@]+@[^@]+\.[^@]+$',
+                              ).hasMatch(value.trim())) {
                                 return 'Please enter a valid email address';
                               }
                               return null;
@@ -326,9 +362,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           TextFormField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
-                            style: GoogleFonts.inter(color: const Color(0xFF111827)),
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF111827),
+                            ),
                             decoration: InputDecoration(
-                              prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                              prefixIcon: const Icon(
+                                Icons.lock_outline,
+                                size: 20,
+                              ),
                               hintText: '••••••••••',
                               suffixIcon: IconButton(
                                 icon: Icon(
@@ -377,7 +418,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                           width: 1.5,
                                         ),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(4),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                         ),
                                         onChanged: (val) {
                                           setState(() {
@@ -403,7 +446,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   onTap: () {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('Password reset flow not implemented.'),
+                                        content: Text(
+                                          'Password reset flow not implemented.',
+                                        ),
                                       ),
                                     );
                                   },
@@ -437,34 +482,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ),
                               ),
                               onPressed: _isLoading ? null : _handleSubmit,
-                              child: _isLoading
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                      ),
-                                    )
-                                  : Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          _isLoginMode ? 'Sign in' : 'Register',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        const Icon(
-                                          Icons.arrow_forward,
-                                          size: 16,
-                                          color: Colors.white,
-                                        ),
-                                      ],
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    _isLoginMode ? 'Sign in' : 'Register',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
                                     ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Icon(
+                                    Icons.arrow_forward,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -516,6 +552,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
               ),
+              if (_isLoading)
+                Positioned.fill(
+                  child: BrandLoadingScreen(
+                    message: _isLoginMode
+                        ? 'Signing in...'
+                        : 'Creating account...',
+                  ),
+                ),
             ],
           ),
         ),

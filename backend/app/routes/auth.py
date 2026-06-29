@@ -4,7 +4,7 @@ import logging
 import httpx
 import asyncpg
 from fastapi import APIRouter, HTTPException, status, Header
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from app.core.config import settings
 
 logger = logging.getLogger("acta.routes.auth")
@@ -36,6 +36,10 @@ class RegisterInput(BaseModel):
 class LoginInput(BaseModel):
     email: str
     password: str
+
+class ChangePasswordInput(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=6)
 
 class ProfileResponse(BaseModel):
     id: str
@@ -269,3 +273,97 @@ async def get_me(authorization: str | None = Header(None)):
         "first_name": first_name,
         "last_name": last_name,
     }
+
+@router.post("/change-password")
+async def change_password(
+    input_data: ChangePasswordInput,
+    authorization: str | None = Header(None),
+):
+    """
+    Change the current user's password after verifying their active session
+    and current password.
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authorization token missing or invalid.",
+        )
+
+    token = authorization.split(" ")[1]
+    user_headers = {
+        "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {token}",
+    }
+    service_headers = {
+        "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    async with httpx.AsyncClient() as client:
+        try:
+            user_response = await client.get(
+                f"{SUPABASE_AUTH_URL}/user",
+                headers=user_headers,
+                timeout=5.0,
+            )
+        except Exception as e:
+            logger.error("Failed to verify Supabase session: %s", e)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Authentication service unavailable.",
+            )
+
+        if user_response.status_code != 200:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session expired or invalid token.",
+            )
+
+        user_info = user_response.json()
+        user_id = user_info.get("id")
+        email = user_info.get("email")
+        if not user_id or not email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unable to resolve current user.",
+            )
+
+        verify_response = await client.post(
+            f"{SUPABASE_AUTH_URL}/token?grant_type=password",
+            headers={
+                "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                "Content-Type": "application/json",
+            },
+            json={
+                "email": email,
+                "password": input_data.current_password,
+            },
+            timeout=10.0,
+        )
+        if verify_response.status_code != 200:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password is incorrect.",
+            )
+
+        update_response = await client.put(
+            f"{SUPABASE_AUTH_URL}/admin/users/{user_id}",
+            headers=service_headers,
+            json={"password": input_data.new_password},
+            timeout=10.0,
+        )
+
+    if update_response.status_code not in (200, 204):
+        try:
+            error_data = update_response.json()
+            detail = (
+                error_data.get("msg")
+                or error_data.get("error_description")
+                or "Failed to update password."
+            )
+        except Exception:
+            detail = update_response.text or "Failed to update password."
+        raise HTTPException(status_code=update_response.status_code, detail=detail)
+
+    return {"message": "Password changed successfully."}
