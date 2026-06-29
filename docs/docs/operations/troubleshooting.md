@@ -65,15 +65,24 @@ Check:
 - Barangay GeoJSON seed data has been imported.
 - The `get_barangays_geojson` RPC migration has been applied.
 - `GET /api/v1/barangays/geojson` returns a GeoJSON FeatureCollection.
-- Browser requests are reaching the backend at `http://localhost:8000`.
+- Browser requests are reaching the URL configured by `ApiConfig.baseUrl`.
 
 ## Frontend Cannot Reach Backend
 
-The Flutter code currently uses `http://localhost:8000` in multiple files. That
-works for Chrome and desktop apps running on the same machine as the backend.
+The Flutter code uses `ApiConfig.baseUrl` from `lib/config/api_config.dart`.
+The default points at the deployed ACTA backend. Override it with
+`ACTA_API_BASE_URL` when running against a local or staging backend:
+
+```sh
+flutter run -d chrome --dart-define=ACTA_API_BASE_URL=http://localhost:8000
+```
 
 For Android emulators, iOS simulators, physical devices, or deployed builds,
-configure a reachable backend URL for that target.
+use a backend URL reachable from that target.
+
+During prototype demos, use **Use Demo Result** in Simulation Setup if external
+network access is unavailable. This only loads local representative result data;
+it does not verify backend health.
 
 ## Gemini Output Is Missing
 

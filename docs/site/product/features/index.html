@@ -144,13 +144,18 @@ plan.</p>
 </tr>
 <tr>
 <td>Simulation Setup</td>
-<td>Configure a hazard scenario with wind speed, 24-hour rainfall, preparation window, storm track, and storm radius.</td>
-<td>Implemented for hydrologic flood simulations. Earthquake and virus outbreak are selectable profiles but do not yet have dedicated backend risk models.</td>
+<td>Configure a hazard scenario with wind speed, 24-hour rainfall, preparation window, and storm track assumptions.</td>
+<td>Implemented for hydrologic flood simulations with a guarded submit state to prevent duplicate starts. Earthquake and virus outbreak are visible but disabled until dedicated backend risk models exist. The backend still supports <code>storm_radius_km</code>, but the current frontend uses its default rather than exposing it as a separate operator control.</td>
 </tr>
 <tr>
 <td>Async Simulation Runs</td>
 <td>Submit a scenario and monitor progress while the backend computes risk and action data.</td>
 <td>Implemented through <code>POST /api/v1/simulation/run</code>, status polling, and stored <code>simulation_runs</code> records.</td>
+</tr>
+<tr>
+<td>Prototype Demo Result</td>
+<td>Continue a live presentation even if the network or backend is unavailable.</td>
+<td>Implemented as an explicit <code>Use Demo Result</code> action in Simulation Setup. It loads local representative flood output and does not call backend APIs.</td>
 </tr>
 <tr>
 <td>Barangay Risk Scoring</td>
@@ -208,6 +213,9 @@ plan.</p>
 <li>The operator finalizes the Master Action Plan, exports a PDF, and dispatches
    the plan through the backend dispatch hook.</li>
 </ol>
+<p>For competition or offline demos, the operator can choose <strong>Use Demo Result</strong> in
+Simulation Setup. This bypasses the backend and loads <code>lib/models/demo_simulation.dart</code>
+so the AI Action Plan and Master Action Plan screens remain available.</p>
 <h2 id="what-makes-the-system-useful">What Makes The System Useful<a class="headerlink" href="#what-makes-the-system-useful" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Spatial grounding:</strong> decisions are tied to Manila barangay boundaries,
@@ -222,6 +230,8 @@ plan.</p>
   approval, and dispatch instead of stopping at a model response.</li>
 <li><strong>Fallback behavior:</strong> deterministic templates keep the workflow usable when
   Gemini is not configured or fails.</li>
+<li><strong>Demo resilience:</strong> a local demo result keeps the prototype walkthrough
+  presentable when external services are slow or unreachable.</li>
 </ul>
 <h2 id="current-gaps-and-improvement-targets">Current Gaps And Improvement Targets<a class="headerlink" href="#current-gaps-and-improvement-targets" title="Permanent link">&para;</a></h2>
 <table>
@@ -267,6 +277,11 @@ plan.</p>
 <td>Real telemetry</td>
 <td>The data pipeline can ingest hazard data, but operator-facing freshness and source status are not prominent.</td>
 <td>Surface last-ingested timestamps and data source health in the Command Center.</td>
+</tr>
+<tr>
+<td>Demo data boundary</td>
+<td>The prototype demo result is intentionally local and representative, not a persisted simulation run.</td>
+<td>Keep the <code>Use Demo Result</code> action clearly labeled, and avoid mixing demo output with production analytics or dispatch audits.</td>
 </tr>
 </tbody>
 </table>

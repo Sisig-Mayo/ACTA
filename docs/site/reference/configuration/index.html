@@ -75,6 +75,8 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#flutter-package">Flutter Package</a>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#frontend-api-base-url">Frontend API Base URL</a>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#backend-package">Backend Package</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#cors">CORS</a>
@@ -221,6 +223,18 @@ version: 0.1.0+1
 <p>Development dependencies include Flutter tests, Flutter lints, build runner,
 JSON serialization, and Riverpod code generation.</p>
 <p>The app enables Material support and includes assets from <code>lib/assets/</code>.</p>
+<h2 id="frontend-api-base-url">Frontend API Base URL<a class="headerlink" href="#frontend-api-base-url" title="Permanent link">&para;</a></h2>
+<p>The Flutter app centralizes the backend base URL in <code>lib/config/api_config.dart</code>.
+By default, frontend API calls use the deployed ACTA backend:</p>
+<pre><code class="language-text">https://acta-production.up.railway.app
+</code></pre>
+<p>Override the base URL with Dart defines when running locally or building for a
+different deployment:</p>
+<pre><code class="language-sh">flutter run -d chrome --dart-define=ACTA_API_BASE_URL=http://localhost:8000
+flutter build web --dart-define=ACTA_API_BASE_URL=https://api.example.com
+</code></pre>
+<p>All frontend Dio clients should use <code>ApiConfig.baseUrl</code> rather than duplicating
+literal URLs in screens, providers, or utilities.</p>
 <h2 id="backend-package">Backend Package<a class="headerlink" href="#backend-package" title="Permanent link">&para;</a></h2>
 <p><code>backend/requirements.txt</code> defines Python dependencies for:</p>
 <ul>
