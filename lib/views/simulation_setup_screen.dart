@@ -12,7 +12,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/simulation_models.dart';
 import '../models/simulation_state.dart';
 import 'app_shell.dart';
 
@@ -23,10 +22,10 @@ import 'app_shell.dart';
 final _rainfallProvider = StateProvider<String>((ref) => '120');
 final _windSpeedProvider = StateProvider<String>((ref) => '65');
 final _prepWindowProvider = StateProvider<String>((ref) => '24 Hours');
-final _pumpingStatusProvider =
-    StateProvider<String>((ref) => '3 Offline');
-final _rescueAssetsProvider =
-    StateProvider<String>((ref) => '12 Boats Available');
+final _pumpingStatusProvider = StateProvider<String>((ref) => '3 Offline');
+final _rescueAssetsProvider = StateProvider<String>(
+  (ref) => '12 Boats Available',
+);
 final _notesProvider = StateProvider<String>((ref) => '');
 
 // -----------------------------------------------------------
@@ -50,12 +49,9 @@ class _SimulationSetupContentState
   @override
   void initState() {
     super.initState();
-    _rainfallCtrl = TextEditingController(
-        text: ref.read(_rainfallProvider));
-    _windCtrl =
-        TextEditingController(text: ref.read(_windSpeedProvider));
-    _notesCtrl =
-        TextEditingController(text: ref.read(_notesProvider));
+    _rainfallCtrl = TextEditingController(text: ref.read(_rainfallProvider));
+    _windCtrl = TextEditingController(text: ref.read(_windSpeedProvider));
+    _notesCtrl = TextEditingController(text: ref.read(_notesProvider));
   }
 
   @override
@@ -72,12 +68,18 @@ class _SimulationSetupContentState
     final wind = double.tryParse(_windCtrl.text) ?? 65.0;
     final prepWindowStr = ref.read(_prepWindowProvider);
     int prepWindow = 24;
-    if (prepWindowStr == '1 Week') prepWindow = 168;
-    else if (prepWindowStr == '2 Weeks') prepWindow = 336;
-    else if (prepWindowStr == '1 Month') prepWindow = 720;
-    else if (prepWindowStr == '3 Months') prepWindow = 2160;
-    else if (prepWindowStr == '6 Months') prepWindow = 4320;
-    else prepWindow = int.tryParse(prepWindowStr.split(' ').first) ?? 24;
+    if (prepWindowStr == '1 Week')
+      prepWindow = 168;
+    else if (prepWindowStr == '2 Weeks')
+      prepWindow = 336;
+    else if (prepWindowStr == '1 Month')
+      prepWindow = 720;
+    else if (prepWindowStr == '3 Months')
+      prepWindow = 2160;
+    else if (prepWindowStr == '6 Months')
+      prepWindow = 4320;
+    else
+      prepWindow = int.tryParse(prepWindowStr.split(' ').first) ?? 24;
 
     // Save snapshot for display in run screen
     ref.read(simulationInputSnapshotProvider.notifier).state = {
@@ -90,11 +92,13 @@ class _SimulationSetupContentState
     };
 
     try {
-      final dio = Dio(BaseOptions(
-        baseUrl: 'https://acta-production.up.railway.app',
-        connectTimeout: const Duration(seconds: 60),
-        receiveTimeout: const Duration(seconds: 60),
-      ));
+      final dio = Dio(
+        BaseOptions(
+          baseUrl: 'https://acta-production.up.railway.app',
+          connectTimeout: const Duration(seconds: 60),
+          receiveTimeout: const Duration(seconds: 60),
+        ),
+      );
 
       final response = await dio.post(
         '/api/v1/simulation/run',
@@ -115,14 +119,14 @@ class _SimulationSetupContentState
           response.data != null) {
         final runId = response.data['run_id'] as String;
         if (!mounted) return;
-        
+
         // Safely set all states now that we have runId
         ref.read(simulationRunIdProvider.notifier).state = runId;
         ref.read(simulationProgressProvider.notifier).state = 0;
         ref.read(simulationResultProvider.notifier).state = null;
         ref.read(simulationRunStateProvider.notifier).state =
             SimulationRunState.running;
-        
+
         // Switch tabs
         ref.read(runSimulationActiveProvider.notifier).state = true;
         ref.read(shellIndexProvider.notifier).state = 1;
@@ -133,7 +137,7 @@ class _SimulationSetupContentState
       if (!mounted) return;
       ref.read(simulationErrorProvider.notifier).state =
           e.response?.data?['detail']?.toString() ??
-              'Connection error: ${e.message}';
+          'Connection error: ${e.message}';
       ref.read(simulationRunStateProvider.notifier).state =
           SimulationRunState.error;
     } catch (e) {
@@ -145,8 +149,7 @@ class _SimulationSetupContentState
   }
 
   void _resetParameters() {
-    ref.read(simProfileProvider.notifier).state =
-        SimProfile.hydrologicFlood;
+    ref.read(simProfileProvider.notifier).state = SimProfile.hydrologicFlood;
     _rainfallCtrl.text = '120';
     _windCtrl.text = '65';
     _notesCtrl.text = '';
@@ -154,8 +157,7 @@ class _SimulationSetupContentState
     ref.read(_windSpeedProvider.notifier).state = '65';
     ref.read(_prepWindowProvider.notifier).state = '24 Hours';
     ref.read(_pumpingStatusProvider.notifier).state = '3 Offline';
-    ref.read(_rescueAssetsProvider.notifier).state =
-        '12 Boats Available';
+    ref.read(_rescueAssetsProvider.notifier).state = '12 Boats Available';
   }
 
   @override
@@ -175,21 +177,27 @@ class _SimulationSetupContentState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // 1. Profile Selection
-                const Text('1. Select Simulation Profile',
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF111827))),
+                const Text(
+                  '1. Select Simulation Profile',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF111827),
+                  ),
+                ),
                 const SizedBox(height: 14),
                 _ProfileSelector(),
                 const SizedBox(height: 28),
 
                 // 2. Parameters
-                const Text('2. Set Scenario Parameters',
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF111827))),
+                const Text(
+                  '2. Set Scenario Parameters',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF111827),
+                  ),
+                ),
                 const SizedBox(height: 14),
                 _ParametersForm(
                   rainfallCtrl: _rainfallCtrl,
@@ -209,7 +217,9 @@ class _SimulationSetupContentState
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF16A34A),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 14),
+                          horizontal: 24,
+                          vertical: 14,
+                        ),
                       ),
                     ),
                   ),
@@ -238,7 +248,9 @@ class _SimulationSetupContentState
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF16A34A),
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 14),
+                            horizontal: 24,
+                            vertical: 14,
+                          ),
                         ),
                       ),
                     ],
@@ -266,6 +278,7 @@ class _ProfileSelector extends ConsumerWidget {
       Icons.flood_outlined,
       Color(0xFF0EA5E9),
       'Rainfall-induced flooding, river overflow, and drainage inundation.',
+      true,
     ),
     _Profile(
       SimProfile.earthquake,
@@ -273,6 +286,7 @@ class _ProfileSelector extends ConsumerWidget {
       Icons.foundation_outlined,
       Color(0xFF374151),
       'Earthquake-induced structural damage, infrastructure disruption, and emergency response simulation.',
+      false,
     ),
     _Profile(
       SimProfile.virusOutbreak,
@@ -280,6 +294,7 @@ class _ProfileSelector extends ConsumerWidget {
       Icons.coronavirus_outlined,
       Color(0xFF374151),
       'Disease outbreak spread simulation and response planning.',
+      false,
     ),
   ];
 
@@ -297,8 +312,9 @@ class _ProfileSelector extends ConsumerWidget {
             child: _ProfileCard(
               profile: p,
               isSelected: isSelected,
-              onTap: () =>
-                  ref.read(simProfileProvider.notifier).state = p.value,
+              onTap: p.isEnabled
+                  ? () => ref.read(simProfileProvider.notifier).state = p.value
+                  : null,
             ),
           );
         }).toList(),
@@ -310,13 +326,13 @@ class _ProfileSelector extends ConsumerWidget {
         final isSelected = selected == p.value;
         return Expanded(
           child: Padding(
-            padding:
-                EdgeInsets.only(right: p == _profiles.last ? 0 : 12),
+            padding: EdgeInsets.only(right: p == _profiles.last ? 0 : 12),
             child: _ProfileCard(
               profile: p,
               isSelected: isSelected,
-              onTap: () =>
-                  ref.read(simProfileProvider.notifier).state = p.value,
+              onTap: p.isEnabled
+                  ? () => ref.read(simProfileProvider.notifier).state = p.value
+                  : null,
             ),
           ),
         );
@@ -331,32 +347,43 @@ class _Profile {
   final IconData icon;
   final Color iconColor;
   final String description;
+  final bool isEnabled;
 
   const _Profile(
-      this.value, this.label, this.icon, this.iconColor, this.description);
+    this.value,
+    this.label,
+    this.icon,
+    this.iconColor,
+    this.description,
+    this.isEnabled,
+  );
 }
 
 class _ProfileCard extends StatelessWidget {
   final _Profile profile;
   final bool isSelected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
-  const _ProfileCard(
-      {required this.profile,
-      required this.isSelected,
-      required this.onTap});
+  const _ProfileCard({
+    required this.profile,
+    required this.isSelected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isEnabled = profile.isEnabled;
+    final iconColor = isEnabled ? profile.iconColor : const Color(0xFF9CA3AF);
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isEnabled ? Colors.white : const Color(0xFFF3F4F6),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isSelected
+            color: isSelected && isEnabled
                 ? const Color(0xFF0EA5E9)
                 : const Color(0xFFE5E7EB),
             width: isSelected ? 2 : 1,
@@ -370,32 +397,42 @@ class _ProfileCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: profile.iconColor.withValues(alpha: 0.1),
+                    color: iconColor.withValues(alpha: isEnabled ? 0.1 : 0.08),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(profile.icon,
-                      size: 24, color: profile.iconColor),
+                  child: Icon(profile.icon, size: 24, color: iconColor),
                 ),
                 const Spacer(),
                 Radio<SimProfile>(
                   value: profile.value,
-                  groupValue:
-                      isSelected ? profile.value : null,
-                  onChanged: (_) => onTap(),
+                  groupValue: isSelected && isEnabled ? profile.value : null,
+                  onChanged: isEnabled ? (_) => onTap?.call() : null,
                   activeColor: const Color(0xFF0EA5E9),
                 ),
               ],
             ),
             const SizedBox(height: 10),
-            Text(profile.label,
-                style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF111827))),
+            Text(
+              profile.label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: isEnabled
+                    ? const Color(0xFF111827)
+                    : const Color(0xFF9CA3AF),
+              ),
+            ),
             const SizedBox(height: 4),
-            Text(profile.description,
-                style: const TextStyle(
-                    fontSize: 12, color: Color(0xFF6B7280), height: 1.4)),
+            Text(
+              profile.description,
+              style: TextStyle(
+                fontSize: 12,
+                color: isEnabled
+                    ? const Color(0xFF6B7280)
+                    : const Color(0xFF9CA3AF),
+                height: 1.4,
+              ),
+            ),
           ],
         ),
       ),
@@ -463,7 +500,8 @@ class _ParametersForm extends ConsumerWidget {
                   child: _paramField(
                     label: '24h Rainfall (mm)',
                     hint: '120',
-                    helper: 'GREEN: <180 | YELLOW: <360 | ORANGE: <720 | RED: 720+',
+                    helper:
+                        'GREEN: <180 | YELLOW: <360 | ORANGE: <720 | RED: 720+',
                     controller: rainfallCtrl,
                     suffix: 'mm',
                     isNumeric: true,
@@ -599,18 +637,20 @@ class _ParametersForm extends ConsumerWidget {
           const SizedBox(height: 20),
 
           // Notes
-          const Text('Additional Notes (Optional)',
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF374151))),
+          const Text(
+            'Additional Notes (Optional)',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF374151),
+            ),
+          ),
           const SizedBox(height: 8),
           TextField(
             controller: notesCtrl,
             maxLines: 4,
             maxLength: 250,
-            onChanged: (v) =>
-                ref.read(_notesProvider.notifier).state = v,
+            onChanged: (v) => ref.read(_notesProvider.notifier).state = v,
             decoration: const InputDecoration(
               hintText: 'Add any scenario assumptions or notes...',
               counterText: '',
@@ -620,8 +660,7 @@ class _ParametersForm extends ConsumerWidget {
             alignment: Alignment.centerRight,
             child: Text(
               '$notesLength / 250',
-              style: const TextStyle(
-                  fontSize: 11, color: Color(0xFF9CA3AF)),
+              style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
             ),
           ),
         ],
@@ -640,16 +679,20 @@ class _ParametersForm extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF374151))),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF374151),
+          ),
+        ),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
-          keyboardType:
-              isNumeric ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
+          keyboardType: isNumeric
+              ? const TextInputType.numberWithOptions(decimal: true)
+              : TextInputType.text,
           inputFormatters: isNumeric
               ? [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))]
               : null,
@@ -657,13 +700,16 @@ class _ParametersForm extends ConsumerWidget {
             hintText: hint,
             suffixText: suffix,
             suffixStyle: const TextStyle(
-                color: Color(0xFF6B7280), fontSize: 12),
+              color: Color(0xFF6B7280),
+              fontSize: 12,
+            ),
           ),
         ),
         const SizedBox(height: 4),
-        Text(helper,
-            style: const TextStyle(
-                fontSize: 11, color: Color(0xFF9CA3AF))),
+        Text(
+          helper,
+          style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+        ),
       ],
     );
   }
@@ -678,31 +724,35 @@ class _ParametersForm extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF374151))),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF374151),
+          ),
+        ),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
           value: value,
           onChanged: onChanged,
           decoration: const InputDecoration(),
-          style: const TextStyle(
-              fontSize: 13, color: Color(0xFF111827)),
-          icon: const Icon(Icons.keyboard_arrow_down,
-              color: Color(0xFF6B7280), size: 18),
+          style: const TextStyle(fontSize: 13, color: Color(0xFF111827)),
+          icon: const Icon(
+            Icons.keyboard_arrow_down,
+            color: Color(0xFF6B7280),
+            size: 18,
+          ),
           items: items
               .map((i) => DropdownMenuItem(value: i, child: Text(i)))
               .toList(),
         ),
         const SizedBox(height: 4),
-        Text(helper,
-            style: const TextStyle(
-                fontSize: 11, color: Color(0xFF9CA3AF))),
+        Text(
+          helper,
+          style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+        ),
       ],
     );
   }
 }
-
-

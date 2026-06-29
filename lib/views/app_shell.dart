@@ -13,6 +13,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
 
 import '../models/user_profile.dart';
+import '../models/simulation_models.dart';
 import '../models/simulation_state.dart';
 import '../utils/auth_storage.dart';
 import 'command_center_screen.dart';
@@ -33,8 +34,13 @@ final shellIndexProvider = StateProvider<int>((ref) => 0);
 /// Whether the Run Simulation sub-screen is active (within Simulation).
 final runSimulationActiveProvider = StateProvider<bool>((ref) => false);
 
-/// Notification toast visibility.
-final toastVisibleProvider = StateProvider<bool>((ref) => true);
+/// Notification ids dismissed from the sidebar for the current app session.
+final dismissedNotificationIdsProvider = StateProvider<Set<String>>(
+  (ref) => <String>{},
+);
+
+/// Active notification card shown in the sidebar carousel.
+final activeSidebarNotificationIndexProvider = StateProvider<int>((ref) => 0);
 
 /// Settings overlay visibility.
 final settingsOverlayVisibleProvider = StateProvider<bool>((ref) => false);
@@ -45,6 +51,119 @@ final simulationCompleteNotificationsProvider = StateProvider<bool>(
 );
 final criticalRiskNotificationsProvider = StateProvider<bool>((ref) => true);
 final dispatchNotificationsProvider = StateProvider<bool>((ref) => true);
+
+class _SidebarNotification {
+  final String id;
+  final String label;
+  final String title;
+  final String message;
+  final String actionLabel;
+  final IconData icon;
+  final Color color;
+  final int targetIndex;
+
+  const _SidebarNotification({
+    required this.id,
+    required this.label,
+    required this.title,
+    required this.message,
+    required this.actionLabel,
+    required this.icon,
+    required this.color,
+    required this.targetIndex,
+  });
+}
+
+final _sidebarNotificationsProvider = Provider<List<_SidebarNotification>>((
+  ref,
+) {
+  final result = ref.watch(simulationResultProvider);
+  final runId =
+      ref.watch(simulationRunIdProvider) ??
+      result?.metadata['run_id']?.toString() ??
+      result?.hashCode.toString() ??
+      'latest';
+  final runState = ref.watch(simulationRunStateProvider);
+  final isDispatching = ref.watch(dispatchLoadingProvider);
+  final isPlanApproved = ref.watch(planApprovedProvider);
+  final dismissedIds = ref.watch(dismissedNotificationIdsProvider);
+  final notifications = <_SidebarNotification>[];
+
+  void add(_SidebarNotification notification) {
+    if (!dismissedIds.contains(notification.id)) {
+      notifications.add(notification);
+    }
+  }
+
+  if (ref.watch(simulationCompleteNotificationsProvider) &&
+      runState == SimulationRunState.completed &&
+      result != null) {
+    add(
+      _SidebarNotification(
+        id: 'simulation-complete-$runId',
+        label: 'New',
+        title: 'Simulation complete',
+        message:
+            '${result.impactedBarangays.length} barangays analyzed with ${result.taskList.length} recommended actions.',
+        actionLabel: 'View plan',
+        icon: Icons.check_circle_outline,
+        color: const Color(0xFF16A34A),
+        targetIndex: 2,
+      ),
+    );
+  }
+
+  if (ref.watch(criticalRiskNotificationsProvider) && result != null) {
+    final criticalCount = result.redZoneCount;
+    if (criticalCount > 0 || result.severityTier == SeverityTier.critical) {
+      add(
+        _SidebarNotification(
+          id: 'critical-risk-$runId',
+          label: 'Risk',
+          title: 'Critical risk threshold',
+          message:
+              '$criticalCount red-zone barangays require immediate operations review.',
+          actionLabel: 'Open command',
+          icon: Icons.warning_amber_rounded,
+          color: const Color(0xFFF59E0B),
+          targetIndex: 0,
+        ),
+      );
+    }
+  }
+
+  if (ref.watch(dispatchNotificationsProvider)) {
+    if (isDispatching) {
+      add(
+        _SidebarNotification(
+          id: 'dispatch-in-progress-$runId',
+          label: 'Dispatch',
+          title: 'Dispatch in progress',
+          message: 'Master action plan notifications are being sent.',
+          actionLabel: 'Review',
+          icon: Icons.outgoing_mail,
+          color: const Color(0xFF0EA5E9),
+          targetIndex: 4,
+        ),
+      );
+    } else if (isPlanApproved) {
+      add(
+        _SidebarNotification(
+          id: 'dispatch-approved-$runId',
+          label: 'Sent',
+          title: 'Plan dispatched',
+          message: 'Master action plan has been approved and dispatched.',
+          actionLabel: 'Open report',
+          icon: Icons.send_rounded,
+          color: const Color(0xFF16A34A),
+          targetIndex: 4,
+        ),
+      );
+    }
+  }
+
+  return notifications;
+});
 
 // -----------------------------------------------------------
 // Light Dashboard Theme
@@ -213,7 +332,10 @@ class _Sidebar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authUserProvider);
-    final toastVisible = ref.watch(toastVisibleProvider);
+    final notifications = ref.watch(_sidebarNotificationsProvider);
+    final activeNotificationIndex = ref.watch(
+      activeSidebarNotificationIndexProvider,
+    );
     final isMobile = MediaQuery.of(context).size.width < 768;
 
     return Container(
@@ -256,11 +378,39 @@ class _Sidebar extends ConsumerWidget {
               ),
             ),
 
-            // --- Notification Toast ---
-            if (toastVisible)
-              _NotificationToast(
-                onDismiss: () =>
-                    ref.read(toastVisibleProvider.notifier).state = false,
+            // --- Notifications ---
+            if (notifications.isNotEmpty)
+              _NotificationCarousel(
+                notifications: notifications,
+                activeIndex: activeNotificationIndex,
+                onNext: () {
+                  ref
+                          .read(activeSidebarNotificationIndexProvider.notifier)
+                          .state =
+                      (activeNotificationIndex + 1) % notifications.length;
+                },
+                onDismiss: (id) {
+                  final dismissed = ref.read(dismissedNotificationIdsProvider);
+                  ref.read(dismissedNotificationIdsProvider.notifier).state = {
+                    ...dismissed,
+                    id,
+                  };
+                  if (activeNotificationIndex >= notifications.length - 1) {
+                    ref
+                            .read(
+                              activeSidebarNotificationIndexProvider.notifier,
+                            )
+                            .state =
+                        0;
+                  }
+                },
+                onOpen: (notification) {
+                  ref.read(shellIndexProvider.notifier).state =
+                      notification.targetIndex;
+                  if (Scaffold.of(context).isDrawerOpen) {
+                    Navigator.of(context).pop();
+                  }
+                },
               ),
 
             // --- Settings ---
@@ -428,89 +578,192 @@ class _BrandHeader extends StatelessWidget {
   }
 }
 
-class _NotificationToast extends StatelessWidget {
-  final VoidCallback onDismiss;
-  const _NotificationToast({required this.onDismiss});
+class _NotificationCarousel extends StatelessWidget {
+  final List<_SidebarNotification> notifications;
+  final int activeIndex;
+  final VoidCallback onNext;
+  final ValueChanged<String> onDismiss;
+  final ValueChanged<_SidebarNotification> onOpen;
+
+  const _NotificationCarousel({
+    required this.notifications,
+    required this.activeIndex,
+    required this.onNext,
+    required this.onDismiss,
+    required this.onOpen,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final safeIndex = activeIndex.clamp(0, notifications.length - 1);
+    final notification = notifications[safeIndex];
+
     return Padding(
       padding: const EdgeInsets.all(8),
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1E293B),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFF334155)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF16A34A),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text(
-                    'New',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
+      child: _NotificationCard(
+        notification: notification,
+        position: safeIndex + 1,
+        total: notifications.length,
+        onNext: onNext,
+        onDismiss: () => onDismiss(notification.id),
+        onOpen: () => onOpen(notification),
+      ),
+    );
+  }
+}
+
+class _NotificationCard extends StatelessWidget {
+  final _SidebarNotification notification;
+  final int position;
+  final int total;
+  final VoidCallback onNext;
+  final VoidCallback onDismiss;
+  final VoidCallback onOpen;
+
+  const _NotificationCard({
+    required this.notification,
+    required this.position,
+    required this.total,
+    required this.onNext,
+    required this.onDismiss,
+    required this.onOpen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onOpen,
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E293B),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFF334155)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: notification.color,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      notification.label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: onDismiss,
-                  child: const Icon(
-                    Icons.close,
-                    size: 13,
-                    color: Color(0xFF64748B),
+                  const Spacer(),
+                  if (total > 1)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Text(
+                        '$position/$total',
+                        style: const TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  Icon(notification.icon, size: 13, color: notification.color),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: onDismiss,
+                    child: const Icon(
+                      Icons.close,
+                      size: 13,
+                      color: Color(0xFF64748B),
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Notifications sent here',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
+                ],
               ),
-            ),
-            const SizedBox(height: 2),
-            const Text(
-              'This is a sample, check it out!',
-              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                const Text(
-                  'Try it out ',
-                  style: TextStyle(
-                    color: Color(0xFF16A34A),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
+              const SizedBox(height: 6),
+              Text(
+                notification.title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                notification.message,
+                style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            '${notification.actionLabel} ',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: notification.color,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.open_in_new,
+                          size: 10,
+                          color: notification.color,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const Icon(
-                  Icons.open_in_new,
-                  size: 10,
-                  color: Color(0xFF16A34A),
-                ),
-              ],
-            ),
-          ],
+                  if (total > 1)
+                    InkWell(
+                      borderRadius: BorderRadius.circular(4),
+                      onTap: onNext,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 2,
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              'Next',
+                              style: TextStyle(
+                                color: notification.color,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            Icon(
+                              Icons.chevron_right,
+                              size: 12,
+                              color: notification.color,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
