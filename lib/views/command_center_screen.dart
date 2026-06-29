@@ -23,11 +23,11 @@ import '../models/simulation_state.dart';
 const _kManilaCtr = LatLng(14.5928, 120.9762);
 
 const _priorityAreas = [
-  _RiskArea('Tondo', 'High Risk', Color(0xFF1E3A8A), 'Coastal flooding, dense population'),
-  _RiskArea('Sampaloc', 'Moderate Risk', Color(0xFF2563EB), 'Drainage overflow history'),
-  _RiskArea('Pandacan', 'Moderate Risk', Color(0xFF2563EB), 'River proximity'),
-  _RiskArea('Paco', 'Moderate Risk', Color(0xFF2563EB), 'Low-lying roads'),
-  _RiskArea('Malate', 'Low Risk', Color(0xFF0EA5E9), 'Shelter access nearby'),
+  _RiskArea('Tondo', 'High Risk', Color(0xFFDC2626), 'Coastal flooding, dense population'),
+  _RiskArea('Sampaloc', 'Moderate Risk', Color(0xFFF59E0B), 'Drainage overflow history'),
+  _RiskArea('Pandacan', 'Moderate Risk', Color(0xFFF59E0B), 'River proximity'),
+  _RiskArea('Paco', 'Moderate Risk', Color(0xFFF59E0B), 'Low-lying roads'),
+  _RiskArea('Malate', 'Low Risk', Color(0xFF16A34A), 'Shelter access nearby'),
 ];
 
 class _RiskArea {
@@ -305,13 +305,13 @@ class _OverviewTab extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _legendItem(const Color(0xFF1E3A8A), 'High Risk (Dark Blue)'),
+                  _legendItem(const Color(0xFFEF4444), 'High Risk (Red)'),
                   const SizedBox(height: 4),
-                  _legendItem(const Color(0xFF2563EB), 'Moderate Risk (Blue)'),
+                  _legendItem(const Color(0xFFF59E0B), 'Moderate Risk (Yellow)'),
                   const SizedBox(height: 4),
-                  _legendItem(const Color(0xFF0EA5E9), 'Low Risk (Light Blue)'),
+                  _legendItem(const Color(0xFF16A34A), 'Low Risk (Green)'),
                   const SizedBox(height: 4),
-                  _legendItem(const Color(0xFF38BDF8), 'Baseline'),
+                  _legendItem(const Color(0xFF0EA5E9), 'Baseline'),
                 ],
               ),
             ),
@@ -678,9 +678,9 @@ class _AlertCard extends StatelessWidget {
   const _AlertCard({required this.alert});
 
   Color get _color => switch (alert.level) {
-        'HIGH' => const Color(0xFF1E3A8A),
-        'MODERATE' => const Color(0xFF2563EB),
-        _ => const Color(0xFF0EA5E9),
+        'HIGH' => const Color(0xFFDC2626),
+        'MODERATE' => const Color(0xFFF59E0B),
+        _ => const Color(0xFF16A34A),
       };
 
   @override
