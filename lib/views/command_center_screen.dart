@@ -15,7 +15,6 @@ import 'package:latlong2/latlong.dart';
 import 'app_shell.dart';
 import '../models/barangay_provider.dart';
 import '../models/simulation_state.dart';
-import '../models/simulation_models.dart';
 
 // -----------------------------------------------------------
 // Static Baseline Data
