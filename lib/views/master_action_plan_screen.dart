@@ -28,6 +28,9 @@ import 'app_shell.dart';
 /// Dispatch loading state.
 final dispatchLoadingProvider = StateProvider<bool>((ref) => false);
 
+/// PDF export loading state.
+final exportLoadingProvider = StateProvider<bool>((ref) => false);
+
 // -----------------------------------------------------------
 // Master Action Plan Screen Content
 // -----------------------------------------------------------
@@ -36,15 +39,19 @@ class MasterActionPlanContent extends ConsumerStatefulWidget {
   const MasterActionPlanContent({super.key});
 
   @override
-  ConsumerState<MasterActionPlanContent> createState() => _MasterActionPlanContentState();
+  ConsumerState<MasterActionPlanContent> createState() =>
+      _MasterActionPlanContentState();
 }
 
-class _MasterActionPlanContentState extends ConsumerState<MasterActionPlanContent> {
-  final Dio _dio = Dio(BaseOptions(
-    baseUrl: 'https://acta-production.up.railway.app',
-    connectTimeout: const Duration(seconds: 60),
-    receiveTimeout: const Duration(seconds: 30),
-  ));
+class _MasterActionPlanContentState
+    extends ConsumerState<MasterActionPlanContent> {
+  final Dio _dio = Dio(
+    BaseOptions(
+      baseUrl: 'https://acta-production.up.railway.app',
+      connectTimeout: const Duration(seconds: 60),
+      receiveTimeout: const Duration(seconds: 30),
+    ),
+  );
 
   Future<void> _handleDownloadPdf(SimulationOutput output) async {
     ref.read(exportLoadingProvider.notifier).state = true;
@@ -86,22 +93,22 @@ class _MasterActionPlanContentState extends ConsumerState<MasterActionPlanConten
       // Prepare dispatch payload
       final payload = {
         'run_id': output.metadata['run_id'] ?? 'unknown',
-        'dispatched_by': ref.read(authUserProvider)?.email ?? 'operator@lgu.gov.ph',
+        'dispatched_by':
+            ref.read(authUserProvider)?.email ?? 'operator@lgu.gov.ph',
         'timestamp': DateTime.now().toUtc().toIso8601String(),
         'action_count': output.taskList.length,
       };
 
-      await _dio.post(
-        '/api/v1/simulation/dispatch',
-        data: payload,
-      );
+      await _dio.post('/api/v1/simulation/dispatch', data: payload);
 
       ref.read(planApprovedProvider.notifier).state = true;
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Master action plan approved and successfully dispatched!'),
+            content: Text(
+              'Master action plan approved and successfully dispatched!',
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -135,12 +142,15 @@ class _MasterActionPlanContentState extends ConsumerState<MasterActionPlanConten
           actions: [
             if (result != null)
               OutlinedButton.icon(
-                onPressed: isExporting ? null : () => _handleDownloadPdf(result),
+                onPressed: isExporting
+                    ? null
+                    : () => _handleDownloadPdf(result),
                 icon: isExporting
                     ? const SizedBox(
                         width: 14,
                         height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2))
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : const Icon(Icons.picture_as_pdf_outlined, size: 15),
                 label: Text(isExporting ? 'Generating...' : 'Download PDF'),
               ),
@@ -177,15 +187,21 @@ class _EmptyState extends ConsumerWidget {
               color: Color(0xFFF1F5F9),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.article_outlined,
-                size: 48, color: Color(0xFF64748B)),
+            child: const Icon(
+              Icons.article_outlined,
+              size: 48,
+              color: Color(0xFF64748B),
+            ),
           ),
           const SizedBox(height: 20),
-          const Text('No Master Action Plan Ready',
-              style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF111827))),
+          const Text(
+            'No Master Action Plan Ready',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF111827),
+            ),
+          ),
           const SizedBox(height: 6),
           const Text(
             'Run a simulation first to generate the executive report and task ledger.',
@@ -245,26 +261,16 @@ class _MasterPlanBody extends ConsumerWidget {
       child: isMobile
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                leftContent,
-                const SizedBox(height: 16),
-                rightContent,
-              ],
+              children: [leftContent, const SizedBox(height: 16), rightContent],
             )
           : Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Left column: Document Content
-                Expanded(
-                  flex: 3,
-                  child: leftContent,
-                ),
+                Expanded(flex: 3, child: leftContent),
                 const SizedBox(width: 16),
                 // Right column: Control Panel / Signatures
-                SizedBox(
-                  width: 280,
-                  child: rightContent,
-                ),
+                SizedBox(width: 280, child: rightContent),
               ],
             ),
     );
@@ -408,11 +414,13 @@ class _MasterPlanBody extends ConsumerWidget {
           if (isMobile)
             Column(
               children: result.taskList
-                  .map((task) => _MobileTaskCard(
-                        task: task,
-                        formatCategory: _formatCategory,
-                        priorityBadgeWidget: _priorityBadge(task.priority),
-                      ))
+                  .map(
+                    (task) => _MobileTaskCard(
+                      task: task,
+                      formatCategory: _formatCategory,
+                      priorityBadgeWidget: _priorityBadge(task.priority),
+                    ),
+                  )
                   .toList(),
             )
           else
@@ -424,14 +432,15 @@ class _MasterPlanBody extends ConsumerWidget {
                 3: FlexColumnWidth(1.2), // Deadline
               },
               border: const TableBorder(
-                horizontalInside: BorderSide(color: Color(0xFFF1F5F9), width: 1),
+                horizontalInside: BorderSide(
+                  color: Color(0xFFF1F5F9),
+                  width: 1,
+                ),
               ),
               children: [
                 // Header row
                 TableRow(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF8FAFC),
-                  ),
+                  decoration: const BoxDecoration(color: Color(0xFFF8FAFC)),
                   children: [
                     _tableHeader('Priority'),
                     _tableHeader('Category'),
@@ -440,14 +449,16 @@ class _MasterPlanBody extends ConsumerWidget {
                   ],
                 ),
                 // Data rows
-                ...result.taskList.map((task) => TableRow(
-                      children: [
-                        _priorityBadge(task.priority),
-                        _tableCell(_formatCategory(task.category)),
-                        _tableCell(task.action),
-                        _tableCell('T-${task.deadlineHours} hrs'),
-                      ],
-                    )),
+                ...result.taskList.map(
+                  (task) => TableRow(
+                    children: [
+                      _priorityBadge(task.priority),
+                      _tableCell(_formatCategory(task.category)),
+                      _tableCell(task.action),
+                      _tableCell('T-${task.deadlineHours} hrs'),
+                    ],
+                  ),
+                ),
               ],
             ),
         ],
@@ -471,10 +482,13 @@ class _MasterPlanBody extends ConsumerWidget {
 
   String _formatCategory(String category) {
     if (category.isEmpty) return category;
-    return category.split('_').map((word) {
-      if (word.isEmpty) return '';
-      return word[0].toUpperCase() + word.substring(1).toLowerCase();
-    }).join(' ');
+    return category
+        .split('_')
+        .map((word) {
+          if (word.isEmpty) return '';
+          return word[0].toUpperCase() + word.substring(1).toLowerCase();
+        })
+        .join(' ');
   }
 
   Widget _tableCell(String text) {
@@ -482,10 +496,7 @@ class _MasterPlanBody extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       child: Text(
         text,
-        style: GoogleFonts.inter(
-          fontSize: 12,
-          color: const Color(0xFF334155),
-        ),
+        style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF334155)),
       ),
     );
   }
@@ -545,26 +556,35 @@ class _MasterPlanBody extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Approval Status',
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF111827))),
+          const Text(
+            'Approval Status',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF111827),
+            ),
+          ),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: isApproved ? const Color(0xFFF0FDF4) : const Color(0xFFFFFBEB),
+              color: isApproved
+                  ? const Color(0xFFF0FDF4)
+                  : const Color(0xFFFFFBEB),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: isApproved ? const Color(0xFFBBF7D0) : const Color(0xFFFDE68A),
+                color: isApproved
+                    ? const Color(0xFFBBF7D0)
+                    : const Color(0xFFFDE68A),
               ),
             ),
             child: Row(
               children: [
                 Icon(
                   isApproved ? Icons.verified : Icons.pending_actions_outlined,
-                  color: isApproved ? const Color(0xFF16A34A) : const Color(0xFFD97706),
+                  color: isApproved
+                      ? const Color(0xFF16A34A)
+                      : const Color(0xFFD97706),
                   size: 20,
                 ),
                 const SizedBox(width: 8),
@@ -573,19 +593,27 @@ class _MasterPlanBody extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isApproved ? 'Approved & Dispatched' : 'Pending Operations Review',
+                        isApproved
+                            ? 'Approved & Dispatched'
+                            : 'Pending Operations Review',
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: isApproved ? const Color(0xFF15803D) : const Color(0xFFB45309),
+                          color: isApproved
+                              ? const Color(0xFF15803D)
+                              : const Color(0xFFB45309),
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        isApproved ? 'Signed off by Command Officer' : 'Awaiting sign-off authority',
+                        isApproved
+                            ? 'Signed off by Command Officer'
+                            : 'Awaiting sign-off authority',
                         style: TextStyle(
                           fontSize: 10,
-                          color: isApproved ? const Color(0xFF16A34A) : const Color(0xFFD97706),
+                          color: isApproved
+                              ? const Color(0xFF16A34A)
+                              : const Color(0xFFD97706),
                         ),
                       ),
                     ],
@@ -599,9 +627,17 @@ class _MasterPlanBody extends ConsumerWidget {
             width: double.infinity,
             child: isApproved
                 ? OutlinedButton.icon(
-                    onPressed: () => ref.read(planApprovedProvider.notifier).state = false,
-                    icon: const Icon(Icons.cancel_outlined, size: 15, color: Color(0xFFDC2626)),
-                    label: const Text('Revoke Approval', style: TextStyle(color: Color(0xFFDC2626))),
+                    onPressed: () =>
+                        ref.read(planApprovedProvider.notifier).state = false,
+                    icon: const Icon(
+                      Icons.cancel_outlined,
+                      size: 15,
+                      color: Color(0xFFDC2626),
+                    ),
+                    label: const Text(
+                      'Revoke Approval',
+                      style: TextStyle(color: Color(0xFFDC2626)),
+                    ),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Color(0xFFDC2626)),
                     ),
@@ -614,11 +650,15 @@ class _MasterPlanBody extends ConsumerWidget {
                             height: 14,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : const Icon(Icons.send_rounded, size: 15),
-                    label: Text(isDispatching ? 'Dispatching...' : 'Approve & Dispatch'),
+                    label: Text(
+                      isDispatching ? 'Dispatching...' : 'Approve & Dispatch',
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF16A34A),
                     ),
@@ -640,21 +680,36 @@ class _MasterPlanBody extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Verification Signatures',
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF111827))),
+          const Text(
+            'Verification Signatures',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF111827),
+            ),
+          ),
           const SizedBox(height: 12),
-          _detailRow('Authorized Officer', user?.firstName != null ? '${user!.firstName} ${user.lastName}' : 'Operations Commander'),
+          _detailRow(
+            'Authorized Officer',
+            user?.firstName != null
+                ? '${user!.firstName} ${user.lastName}'
+                : 'Operations Commander',
+          ),
           _detailRow('Office Code', 'LGU-MILA-FLOOD'),
           _detailRow('Severity Level', result.severityTier.name.toUpperCase()),
-          _detailRow('Preparation Window', '${result.preparationWindowHours} Hours'),
+          _detailRow(
+            'Preparation Window',
+            '${result.preparationWindowHours} Hours',
+          ),
           _detailRow('Total Risk Zones', '$totalAreas Barangay zones'),
           const Divider(height: 20, color: Color(0xFFE2E8F0)),
           Row(
             children: [
-              const Icon(Icons.lock_outline, size: 14, color: Color(0xFF64748B)),
+              const Icon(
+                Icons.lock_outline,
+                size: 14,
+                color: Color(0xFF64748B),
+              ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
@@ -774,8 +829,9 @@ final _cardDecoration = BoxDecoration(
   border: Border.all(color: const Color(0xFFE5E7EB)),
   boxShadow: [
     BoxShadow(
-        color: Colors.black.withValues(alpha: 0.04),
-        blurRadius: 4,
-        offset: const Offset(0, 1)),
+      color: Colors.black.withValues(alpha: 0.04),
+      blurRadius: 4,
+      offset: const Offset(0, 1),
+    ),
   ],
 );
