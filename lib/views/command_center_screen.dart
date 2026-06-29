@@ -23,8 +23,18 @@ import '../models/simulation_state.dart';
 const _kManilaCtr = LatLng(14.5928, 120.9762);
 
 const _priorityAreas = [
-  _RiskArea('Tondo', 'High Risk', Color(0xFFDC2626), 'Coastal flooding, dense population'),
-  _RiskArea('Sampaloc', 'Moderate Risk', Color(0xFFF59E0B), 'Drainage overflow history'),
+  _RiskArea(
+    'Tondo',
+    'High Risk',
+    Color(0xFFDC2626),
+    'Coastal flooding, dense population',
+  ),
+  _RiskArea(
+    'Sampaloc',
+    'Moderate Risk',
+    Color(0xFFF59E0B),
+    'Drainage overflow history',
+  ),
   _RiskArea('Pandacan', 'Moderate Risk', Color(0xFFF59E0B), 'River proximity'),
   _RiskArea('Paco', 'Moderate Risk', Color(0xFFF59E0B), 'Low-lying roads'),
   _RiskArea('Malate', 'Low Risk', Color(0xFF16A34A), 'Shelter access nearby'),
@@ -37,8 +47,6 @@ class _RiskArea {
   final String keyFactors;
   const _RiskArea(this.name, this.riskLabel, this.riskColor, this.keyFactors);
 }
-
-
 
 // Evacuation center markers (house icon approximation)
 final _evacMarkers = [
@@ -68,8 +76,7 @@ class CommandCenterContent extends ConsumerStatefulWidget {
       _CommandCenterContentState();
 }
 
-class _CommandCenterContentState
-    extends ConsumerState<CommandCenterContent>
+class _CommandCenterContentState extends ConsumerState<CommandCenterContent>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
 
@@ -99,6 +106,8 @@ class _CommandCenterContentState
               icon: const Icon(Icons.refresh, size: 15),
               label: const Text('Refresh'),
             ),
+            const SizedBox(width: 8),
+            const _LiveStatusPill(),
             const SizedBox(width: 8),
             OutlinedButton.icon(
               onPressed: () {
@@ -154,6 +163,37 @@ class _CommandCenterContentState
   }
 }
 
+class _LiveStatusPill extends StatelessWidget {
+  const _LiveStatusPill();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFECFDF5),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFA7F3D0)),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.circle, size: 8, color: Color(0xFF16A34A)),
+          SizedBox(width: 7),
+          Text(
+            'Live demo ready',
+            style: TextStyle(
+              color: Color(0xFF166534),
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // -----------------------------------------------------------
 // Overview Tab
 // -----------------------------------------------------------
@@ -188,7 +228,11 @@ class _OverviewTab extends ConsumerWidget {
                   padding: EdgeInsets.fromLTRB(16, 14, 16, 12),
                   child: Row(
                     children: [
-                      Icon(Icons.location_on, size: 18, color: Color(0xFF374151)),
+                      Icon(
+                        Icons.location_on,
+                        size: 18,
+                        color: Color(0xFF374151),
+                      ),
                       SizedBox(width: 8),
                       Text(
                         'Manila Barangay Flood Risk Map',
@@ -250,42 +294,59 @@ class _OverviewTab extends ConsumerWidget {
             ),
             children: [
               TileLayer(
-                urlTemplate:
-                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.acta.app',
               ),
               // Barangay polygons
               barangaysAsync.when(
                 data: (barangays) => PolygonLayer(
-                  polygons: buildBarangayMapPolygons(barangays, riskMap: riskMap),
+                  polygons: buildBarangayMapPolygons(
+                    barangays,
+                    riskMap: riskMap,
+                  ),
                 ),
                 loading: () => const PolygonLayer(polygons: <Polygon>[]),
-                error: (_, __) => const PolygonLayer(polygons: <Polygon>[]),
+                error: (_, stackTrace) =>
+                    const PolygonLayer(polygons: <Polygon>[]),
               ),
               MarkerLayer(
                 markers: [
-                  ..._evacMarkers.map((ll) => Marker(
-                        point: ll,
-                        width: 24,
-                        height: 24,
-                        child: Container(
-                          decoration: const BoxDecoration(
-                              color: Color(0xFF6D28D9), shape: BoxShape.circle),
-                          child: const Icon(Icons.home,
-                              size: 13, color: Colors.white),
+                  ..._evacMarkers.map(
+                    (ll) => Marker(
+                      point: ll,
+                      width: 24,
+                      height: 24,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF6D28D9),
+                          shape: BoxShape.circle,
                         ),
-                      )),
-                  ..._pumpMarkers.map((ll) => Marker(
-                        point: ll,
-                        width: 24,
-                        height: 24,
-                        child: Container(
-                          decoration: const BoxDecoration(
-                              color: Color(0xFF0EA5E9), shape: BoxShape.circle),
-                          child: const Icon(Icons.water_drop,
-                              size: 12, color: Colors.white),
+                        child: const Icon(
+                          Icons.home,
+                          size: 13,
+                          color: Colors.white,
                         ),
-                      )),
+                      ),
+                    ),
+                  ),
+                  ..._pumpMarkers.map(
+                    (ll) => Marker(
+                      point: ll,
+                      width: 24,
+                      height: 24,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF0EA5E9),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.water_drop,
+                          size: 12,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -307,7 +368,10 @@ class _OverviewTab extends ConsumerWidget {
                 children: [
                   _legendItem(const Color(0xFFEF4444), 'High Risk (Red)'),
                   const SizedBox(height: 4),
-                  _legendItem(const Color(0xFFF59E0B), 'Moderate Risk (Yellow)'),
+                  _legendItem(
+                    const Color(0xFFF59E0B),
+                    'Moderate Risk (Yellow)',
+                  ),
                   const SizedBox(height: 4),
                   _legendItem(const Color(0xFF16A34A), 'Low Risk (Green)'),
                   const SizedBox(height: 4),
@@ -331,8 +395,10 @@ class _OverviewTab extends ConsumerWidget {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 6),
-        Text(label,
-            style: const TextStyle(fontSize: 11, color: Color(0xFF374151))),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, color: Color(0xFF374151)),
+        ),
       ],
     );
   }
@@ -342,12 +408,30 @@ class _OperationalBaselineCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const stats = [
-      _StatRow(Icons.groups_outlined, 'Barangay Covered', '81',
-          Icons.water_drop_outlined, 'Pumping Stations', '12'),
-      _StatRow(Icons.flood_outlined, 'Known Flood-Prone Areas', '18',
-          Icons.local_shipping_outlined, 'Rescue Assets Logged', '64'),
-      _StatRow(Icons.night_shelter_outlined, 'Evacuation Centers', '42',
-          Icons.check_circle_outlined, 'Dataset Status', 'Ready'),
+      _StatRow(
+        Icons.groups_outlined,
+        'Barangay Covered',
+        '81',
+        Icons.water_drop_outlined,
+        'Pumping Stations',
+        '12',
+      ),
+      _StatRow(
+        Icons.flood_outlined,
+        'Known Flood-Prone Areas',
+        '18',
+        Icons.local_shipping_outlined,
+        'Rescue Assets Logged',
+        '64',
+      ),
+      _StatRow(
+        Icons.night_shelter_outlined,
+        'Evacuation Centers',
+        '42',
+        Icons.check_circle_outlined,
+        'Dataset Status',
+        'Ready',
+      ),
     ];
 
     return _card(
@@ -358,23 +442,29 @@ class _OperationalBaselineCard extends StatelessWidget {
           children: [
             const Row(
               children: [
-                Icon(Icons.summarize_outlined,
-                    size: 16, color: Color(0xFF374151)),
+                Icon(
+                  Icons.summarize_outlined,
+                  size: 16,
+                  color: Color(0xFF374151),
+                ),
                 SizedBox(width: 8),
-                Text('Operational Baseline',
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF111827))),
+                Text(
+                  'Operational Baseline',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF111827),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 12),
             const Divider(height: 1, color: Color(0xFFE5E7EB)),
             const SizedBox(height: 10),
-            ...stats.map((s) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: s,
-                )),
+            ...stats.map(
+              (s) =>
+                  Padding(padding: const EdgeInsets.only(bottom: 10), child: s),
+            ),
           ],
         ),
       ),
@@ -391,17 +481,21 @@ class _StatRow extends StatelessWidget {
   final String value2;
 
   const _StatRow(
-      this.icon1, this.label1, this.value1, this.icon2, this.label2, this.value2);
+    this.icon1,
+    this.label1,
+    this.value1,
+    this.icon2,
+    this.label2,
+    this.value2,
+  );
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(
-            child: _statCell(icon1, label1, value1)),
+        Expanded(child: _statCell(icon1, label1, value1)),
         const SizedBox(width: 8),
-        Expanded(
-            child: _statCell(icon2, label2, value2)),
+        Expanded(child: _statCell(icon2, label2, value2)),
       ],
     );
   }
@@ -412,15 +506,19 @@ class _StatRow extends StatelessWidget {
         Icon(icon, size: 16, color: const Color(0xFF6B7280)),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(label,
-              style:
-                  const TextStyle(fontSize: 12, color: Color(0xFF374151))),
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: Color(0xFF374151)),
+          ),
         ),
-        Text(value,
-            style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF111827))),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF111827),
+          ),
+        ),
       ],
     );
   }
@@ -441,11 +539,14 @@ class _PriorityRiskAreasCard extends StatelessWidget {
               children: [
                 Icon(Icons.flag_outlined, size: 16, color: Color(0xFF374151)),
                 SizedBox(width: 8),
-                Text('Priority Risk Areas',
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF111827))),
+                Text(
+                  'Priority Risk Areas',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF111827),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -455,10 +556,35 @@ class _PriorityRiskAreasCard extends StatelessWidget {
               // Table header
               const Row(
                 children: [
-                  SizedBox(width: 24, child: Text('#', style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)))),
-                  Expanded(flex: 2, child: Text('Area', style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)))),
-                  Expanded(flex: 3, child: Text('Risk Level (Baseline)', style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)))),
-                  Expanded(flex: 3, child: Text('Key Risk Factors', style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)))),
+                  SizedBox(
+                    width: 32,
+                    child: Text(
+                      '#',
+                      style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      'Area',
+                      style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      'Risk Level (Baseline)',
+                      style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      'Key Risk Factors',
+                      style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 6),
@@ -480,11 +606,14 @@ class _PriorityRiskAreasCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Center(
-                          child: Text('${i + 1}',
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700)),
+                          child: Text(
+                            '${i + 1}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -495,32 +624,44 @@ class _PriorityRiskAreasCard extends StatelessWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(area.name,
-                                    style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF111827))),
+                                Text(
+                                  area.name,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF111827),
+                                  ),
+                                ),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 2),
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: area.riskColor.withValues(alpha: 0.12),
+                                    color: area.riskColor.withValues(
+                                      alpha: 0.12,
+                                    ),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
                                     area.riskLabel,
                                     style: TextStyle(
-                                        color: area.riskColor,
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w700),
+                                      color: area.riskColor,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 4),
-                            Text(area.keyFactors,
-                                style: const TextStyle(
-                                    fontSize: 11, color: Color(0xFF6B7280))),
+                            Text(
+                              area.keyFactors,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF6B7280),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -533,7 +674,7 @@ class _PriorityRiskAreasCard extends StatelessWidget {
                 child: Row(
                   children: [
                     SizedBox(
-                      width: 24,
+                      width: 32,
                       child: Container(
                         width: 18,
                         height: 18,
@@ -542,45 +683,62 @@ class _PriorityRiskAreasCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Center(
-                          child: Text('${i + 1}',
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700)),
+                          child: Text(
+                            '${i + 1}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
                       ),
                     ),
+                    const SizedBox(width: 10),
                     Expanded(
                       flex: 2,
-                      child: Text(area.name,
-                          style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF111827))),
-                    ),
-                    Expanded(
-                      flex: 3,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: area.riskColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          area.riskLabel,
-                          style: TextStyle(
-                              color: area.riskColor,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700),
+                      child: Text(
+                        area.name,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF111827),
                         ),
                       ),
                     ),
                     Expanded(
                       flex: 3,
-                      child: Text(area.keyFactors,
-                          style: const TextStyle(
-                              fontSize: 11, color: Color(0xFF6B7280))),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: area.riskColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            area.riskLabel,
+                            style: TextStyle(
+                              color: area.riskColor,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        area.keyFactors,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -628,10 +786,14 @@ class _RiskMapTab extends ConsumerWidget {
               ),
               barangaysAsync.when(
                 data: (barangays) => PolygonLayer(
-                  polygons: buildBarangayMapPolygons(barangays, riskMap: riskMap),
+                  polygons: buildBarangayMapPolygons(
+                    barangays,
+                    riskMap: riskMap,
+                  ),
                 ),
                 loading: () => const PolygonLayer(polygons: <Polygon>[]),
-                error: (_, __) => const PolygonLayer(polygons: <Polygon>[]),
+                error: (_, stackTrace) =>
+                    const PolygonLayer(polygons: <Polygon>[]),
               ),
             ],
           ),
@@ -647,12 +809,24 @@ class _RiskMapTab extends ConsumerWidget {
 
 class _AlertsTab extends StatelessWidget {
   static const _alerts = [
-    _AlertItem('HIGH', 'Flood watch issued for Tondo District',
-        'PAGASA issued a flood watch advisory for Tondo and surrounding barangays due to sustained rainfall above 80mm/hr.', '10 mins ago'),
-    _AlertItem('MODERATE', 'Pumping station offline — Sampaloc',
-        'Pumping station PS-07 in Sampaloc has gone offline. Drainage capacity reduced by 30%.', '32 mins ago'),
-    _AlertItem('LOW', 'Evacuation center at 70% capacity',
-        'Rizal High School evacuation center is nearing capacity. Consider activating backup site.', '1 hr ago'),
+    _AlertItem(
+      'HIGH',
+      'Flood watch issued for Tondo District',
+      'PAGASA issued a flood watch advisory for Tondo and surrounding barangays due to sustained rainfall above 80mm/hr.',
+      '10 mins ago',
+    ),
+    _AlertItem(
+      'MODERATE',
+      'Pumping station offline — Sampaloc',
+      'Pumping station PS-07 in Sampaloc has gone offline. Drainage capacity reduced by 30%.',
+      '32 mins ago',
+    ),
+    _AlertItem(
+      'LOW',
+      'Evacuation center at 70% capacity',
+      'Rizal High School evacuation center is nearing capacity. Consider activating backup site.',
+      '1 hr ago',
+    ),
   ];
 
   @override
@@ -678,10 +852,10 @@ class _AlertCard extends StatelessWidget {
   const _AlertCard({required this.alert});
 
   Color get _color => switch (alert.level) {
-        'HIGH' => const Color(0xFFDC2626),
-        'MODERATE' => const Color(0xFFF59E0B),
-        _ => const Color(0xFF16A34A),
-      };
+    'HIGH' => const Color(0xFFDC2626),
+    'MODERATE' => const Color(0xFFF59E0B),
+    _ => const Color(0xFF16A34A),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -692,7 +866,13 @@ class _AlertCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
         border: Border(left: BorderSide(color: _color, width: 4)),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 1))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -705,22 +885,41 @@ class _AlertCard extends StatelessWidget {
                   color: _color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: Text(alert.level,
-                    style: TextStyle(color: _color, fontSize: 10, fontWeight: FontWeight.w700)),
+                child: Text(
+                  alert.level,
+                  style: TextStyle(
+                    color: _color,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(alert.title,
-                    style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF111827))),
+                child: Text(
+                  alert.title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF111827),
+                  ),
+                ),
               ),
-              Text(alert.time,
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF))),
+              Text(
+                alert.time,
+                style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+              ),
             ],
           ),
           const SizedBox(height: 6),
-          Text(alert.body,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280), height: 1.5)),
+          Text(
+            alert.body,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Color(0xFF6B7280),
+              height: 1.5,
+            ),
+          ),
         ],
       ),
     );
@@ -748,15 +947,17 @@ class _ResourcesOverviewTab extends StatelessWidget {
         spacing: 16,
         runSpacing: 16,
         children: _resources
-            .map((r) => SizedBox(
-                  width: isMobile ? double.infinity : 280,
-                  child: _ResourceOverviewCard(
-                    label: r.$1,
-                    count: r.$2,
-                    detail: r.$3,
-                    color: r.$4,
-                  ),
-                ))
+            .map(
+              (r) => SizedBox(
+                width: isMobile ? double.infinity : 280,
+                child: _ResourceOverviewCard(
+                  label: r.$1,
+                  count: r.$2,
+                  detail: r.$3,
+                  color: r.$4,
+                ),
+              ),
+            )
             .toList(),
       ),
     );
@@ -800,17 +1001,28 @@ class _ResourceOverviewCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF6B7280))),
-                Text(count,
-                    style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                        color: color)),
-                Text(detail,
-                    style: const TextStyle(
-                        fontSize: 11, color: Color(0xFF9CA3AF))),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF6B7280),
+                  ),
+                ),
+                Text(
+                  count,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
+                ),
+                Text(
+                  detail,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF9CA3AF),
+                  ),
+                ),
               ],
             ),
           ),

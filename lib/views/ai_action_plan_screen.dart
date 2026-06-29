@@ -267,7 +267,8 @@ class _ActionPlanMap extends StatelessWidget {
                 polygons: buildBarangayMapPolygons(barangays, riskMap: riskMap),
               ),
               loading: () => const PolygonLayer(polygons: <Polygon>[]),
-              error: (_, __) => const PolygonLayer(polygons: <Polygon>[]),
+              error: (_, stackTrace) =>
+                  const PolygonLayer(polygons: <Polygon>[]),
             ),
             MarkerLayer(
               markers: [
@@ -319,10 +320,10 @@ class _ActionPlanMap extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 5),
-                 _legItem(const Color(0xFFDC2626), 'Critical Priority'),
-                 _legItem(const Color(0xFFF97316), 'High Priority'),
-                 _legItem(const Color(0xFFF59E0B), 'Moderate Priority'),
-                 _legItem(const Color(0xFF16A34A), 'Low Priority'),
+                _legItem(const Color(0xFFDC2626), 'Critical Priority'),
+                _legItem(const Color(0xFFF97316), 'High Priority'),
+                _legItem(const Color(0xFFF59E0B), 'Moderate Priority'),
+                _legItem(const Color(0xFF16A34A), 'Low Priority'),
               ],
             ),
           ),

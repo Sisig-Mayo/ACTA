@@ -16,6 +16,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../config/api_config.dart';
 import '../models/simulation_models.dart';
 import '../models/simulation_state.dart';
 import '../models/barangay_provider.dart';
@@ -64,7 +65,7 @@ class _RunSimulationContentState extends ConsumerState<RunSimulationContent> {
   Timer? _pollTimer;
   final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: 'https://acta-production.up.railway.app',
+      baseUrl: ApiConfig.baseUrl,
       connectTimeout: const Duration(seconds: 60),
       receiveTimeout: const Duration(seconds: 30),
     ),
@@ -110,8 +111,7 @@ class _RunSimulationContentState extends ConsumerState<RunSimulationContent> {
         ref.read(simulationRunStateProvider.notifier).state =
             SimulationRunState.error;
       }
-    } catch (e) {
-      print('Polling error: $e');
+    } catch (_) {
       // Silently retry on next poll cycle
     }
   }
@@ -638,7 +638,8 @@ class _MapCard extends StatelessWidget {
                       ),
                     ),
                     loading: () => const PolygonLayer(polygons: <Polygon>[]),
-                    error: (_, __) => const PolygonLayer(polygons: <Polygon>[]),
+                    error: (_, stackTrace) =>
+                        const PolygonLayer(polygons: <Polygon>[]),
                   ),
                 ],
               ),

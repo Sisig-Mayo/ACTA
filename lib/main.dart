@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
 
+import 'config/api_config.dart';
 import 'models/user_profile.dart';
 import 'utils/auth_storage.dart';
 import 'views/login_screen.dart';
@@ -134,7 +135,7 @@ class _AuthGateState extends ConsumerState<_AuthGate> {
 
   final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: 'https://acta-production.up.railway.app',
+      baseUrl: ApiConfig.baseUrl,
       connectTimeout: const Duration(seconds: 60),
       receiveTimeout: const Duration(seconds: 5),
     ),

@@ -14,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
 
+import '../config/api_config.dart';
 import '../models/user_profile.dart';
 import '../models/simulation_models.dart';
 import '../models/simulation_state.dart';
@@ -1291,7 +1292,7 @@ class _SettingsOverlayState extends ConsumerState<_SettingsOverlay> {
   final _confirmPasswordController = TextEditingController();
   final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: 'https://acta-production.up.railway.app',
+      baseUrl: ApiConfig.baseUrl,
       connectTimeout: const Duration(seconds: 8),
       receiveTimeout: const Duration(seconds: 8),
     ),

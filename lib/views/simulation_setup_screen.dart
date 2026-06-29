@@ -15,8 +15,10 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config/api_config.dart';
 import '../config/wind_presets.dart';
 import '../config/rainfall_presets.dart';
+import '../models/demo_simulation.dart';
 import '../models/simulation_state.dart';
 import 'app_shell.dart';
 
@@ -47,24 +49,31 @@ class SimulationSetupContent extends ConsumerStatefulWidget {
 
 class _SimulationSetupContentState
     extends ConsumerState<SimulationSetupContent> {
+  bool _isStarting = false;
+
   Future<void> _runSimulation() async {
+    if (_isStarting) return;
+
+    setState(() => _isStarting = true);
+
     final profile = ref.read(simProfileProvider);
     final wind = ref.read(windPresetProvider);
     final rainfall = ref.read(rainfallPresetProvider);
     final prepWindowStr = ref.read(_prepWindowProvider);
     int prepWindow = 24;
-    if (prepWindowStr == '1 Week')
+    if (prepWindowStr == '1 Week') {
       prepWindow = 168;
-    else if (prepWindowStr == '2 Weeks')
+    } else if (prepWindowStr == '2 Weeks') {
       prepWindow = 336;
-    else if (prepWindowStr == '1 Month')
+    } else if (prepWindowStr == '1 Month') {
       prepWindow = 720;
-    else if (prepWindowStr == '3 Months')
+    } else if (prepWindowStr == '3 Months') {
       prepWindow = 2160;
-    else if (prepWindowStr == '6 Months')
+    } else if (prepWindowStr == '6 Months') {
       prepWindow = 4320;
-    else
+    } else {
       prepWindow = int.tryParse(prepWindowStr.split(' ').first) ?? 24;
+    }
 
     // Save snapshot for display in run screen
     ref.read(simulationInputSnapshotProvider.notifier).state = {
@@ -76,10 +85,12 @@ class _SimulationSetupContentState
       'prep_hours': prepWindow,
     };
 
+    ref.read(simulationErrorProvider.notifier).state = null;
+
     try {
       final dio = Dio(
         BaseOptions(
-          baseUrl: 'https://acta-production.up.railway.app',
+          baseUrl: ApiConfig.baseUrl,
           connectTimeout: const Duration(seconds: 60),
           receiveTimeout: const Duration(seconds: 60),
         ),
@@ -122,7 +133,7 @@ class _SimulationSetupContentState
       if (!mounted) return;
       ref.read(simulationErrorProvider.notifier).state =
           e.response?.data?['detail']?.toString() ??
-          'Connection error: ${e.message}';
+          'Unable to start the simulation. Check the network connection and try again.';
       ref.read(simulationRunStateProvider.notifier).state =
           SimulationRunState.error;
     } catch (e) {
@@ -130,6 +141,10 @@ class _SimulationSetupContentState
       ref.read(simulationErrorProvider.notifier).state = e.toString();
       ref.read(simulationRunStateProvider.notifier).state =
           SimulationRunState.error;
+    } finally {
+      if (mounted) {
+        setState(() => _isStarting = false);
+      }
     }
   }
 
@@ -138,6 +153,26 @@ class _SimulationSetupContentState
     ref.read(windPresetProvider.notifier).state = defaultWindPreset;
     ref.read(rainfallPresetProvider.notifier).state = defaultRainfallPreset;
     ref.read(_prepWindowProvider.notifier).state = '24 Hours';
+  }
+
+  void _loadDemoResult() {
+    final demo = buildDemoSimulationOutput();
+    ref.read(simulationInputSnapshotProvider.notifier).state = {
+      'profile': SimProfile.hydrologicFlood.label,
+      'wind_signal': 'Signal 2',
+      'wind_kph': 90,
+      'rainfall_label': 'Intense',
+      'rainfall_mm': 120,
+      'prep_hours': demo.preparationWindowHours,
+    };
+    ref.read(simulationRunIdProvider.notifier).state = 'demo-run';
+    ref.read(simulationProgressProvider.notifier).state = 100;
+    ref.read(simulationErrorProvider.notifier).state = null;
+    ref.read(simulationResultProvider.notifier).state = demo;
+    ref.read(simulationRunStateProvider.notifier).state =
+        SimulationRunState.completed;
+    ref.read(runSimulationActiveProvider.notifier).state = false;
+    ref.read(shellIndexProvider.notifier).state = 2;
   }
 
   @override
@@ -228,9 +263,20 @@ class _SimulationSetupContentState
                     child: KeyedSubtree(
                       key: widget.runSimulationButtonKey,
                       child: ElevatedButton.icon(
-                        onPressed: _runSimulation,
-                        icon: const Icon(Icons.play_arrow_rounded, size: 18),
-                        label: const Text('Run Simulation'),
+                        onPressed: _isStarting ? null : _runSimulation,
+                        icon: _isStarting
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.play_arrow_rounded, size: 18),
+                        label: Text(
+                          _isStarting ? 'Starting...' : 'Run Simulation',
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1D4ED8),
                           padding: const EdgeInsets.symmetric(
@@ -250,6 +296,15 @@ class _SimulationSetupContentState
                       label: const Text('Reset Parameters'),
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _loadDemoResult,
+                      icon: const Icon(Icons.bolt_outlined, size: 15),
+                      label: const Text('Use Demo Result'),
+                    ),
+                  ),
                 ] else ...[
                   Row(
                     children: [
@@ -258,13 +313,30 @@ class _SimulationSetupContentState
                         icon: const Icon(Icons.refresh, size: 15),
                         label: const Text('Reset Parameters'),
                       ),
+                      const SizedBox(width: 10),
+                      OutlinedButton.icon(
+                        onPressed: _loadDemoResult,
+                        icon: const Icon(Icons.bolt_outlined, size: 15),
+                        label: const Text('Use Demo Result'),
+                      ),
                       const Spacer(),
                       KeyedSubtree(
                         key: widget.runSimulationButtonKey,
                         child: ElevatedButton.icon(
-                          onPressed: _runSimulation,
-                          icon: const Icon(Icons.play_arrow_rounded, size: 18),
-                          label: const Text('Run Simulation'),
+                          onPressed: _isStarting ? null : _runSimulation,
+                          icon: _isStarting
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.play_arrow_rounded, size: 18),
+                          label: Text(
+                            _isStarting ? 'Starting...' : 'Run Simulation',
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF1D4ED8),
                             padding: const EdgeInsets.symmetric(
@@ -426,11 +498,9 @@ class _ProfileCard extends StatelessWidget {
                   child: Icon(profile.icon, size: 24, color: iconColor),
                 ),
                 const Spacer(),
-                Radio<SimProfile>(
-                  value: profile.value,
-                  groupValue: isSelected && isEnabled ? profile.value : null,
-                  onChanged: isEnabled ? (_) => onTap?.call() : null,
-                  activeColor: const Color(0xFF0EA5E9),
+                _SelectionIndicator(
+                  isSelected: isSelected && isEnabled,
+                  isEnabled: isEnabled,
                 ),
               ],
             ),
@@ -459,6 +529,35 @@ class _ProfileCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _SelectionIndicator extends StatelessWidget {
+  final bool isSelected;
+  final bool isEnabled;
+
+  const _SelectionIndicator({
+    required this.isSelected,
+    required this.isEnabled,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isEnabled ? const Color(0xFF0EA5E9) : const Color(0xFFD1D5DB);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      width: 20,
+      height: 20,
+      decoration: BoxDecoration(
+        color: isSelected ? color : Colors.transparent,
+        shape: BoxShape.circle,
+        border: Border.all(color: color, width: isSelected ? 0 : 1.5),
+      ),
+      child: isSelected
+          ? const Icon(Icons.check, size: 13, color: Colors.white)
+          : null,
     );
   }
 }
@@ -835,7 +934,7 @@ class _AdditionalParametersForm extends ConsumerWidget {
         ),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          value: value,
+          initialValue: value,
           onChanged: onChanged,
           decoration: const InputDecoration(),
           style: const TextStyle(fontSize: 13, color: Color(0xFF111827)),
