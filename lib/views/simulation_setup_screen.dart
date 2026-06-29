@@ -4,14 +4,19 @@
 /// simulation against the FastAPI backend.
 /// Renders as content inside AppShell (no Scaffold).
 ///
+/// Wind Condition (TCWS) and 24-Hour Rainfall are independent
+/// selector controls, reflecting how PAGASA issues wind and
+/// rainfall forecasts separately.
+///
 /// Target Branch : feat/dashboard
 library;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config/wind_presets.dart';
+import '../config/rainfall_presets.dart';
 import '../models/simulation_state.dart';
 import 'app_shell.dart';
 
@@ -19,11 +24,7 @@ import 'app_shell.dart';
 // Local providers
 // -----------------------------------------------------------
 
-final _rainfallProvider = StateProvider<String>((ref) => '120');
-final _windSpeedProvider = StateProvider<String>((ref) => '65');
 final _prepWindowProvider = StateProvider<String>((ref) => '24 Hours');
-
-
 
 // -----------------------------------------------------------
 // Simulation Setup Content
@@ -39,27 +40,10 @@ class SimulationSetupContent extends ConsumerStatefulWidget {
 
 class _SimulationSetupContentState
     extends ConsumerState<SimulationSetupContent> {
-  late final TextEditingController _rainfallCtrl;
-  late final TextEditingController _windCtrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _rainfallCtrl = TextEditingController(text: ref.read(_rainfallProvider));
-    _windCtrl = TextEditingController(text: ref.read(_windSpeedProvider));
-  }
-
-  @override
-  void dispose() {
-    _rainfallCtrl.dispose();
-    _windCtrl.dispose();
-    super.dispose();
-  }
-
   Future<void> _runSimulation() async {
     final profile = ref.read(simProfileProvider);
-    final rainfall = double.tryParse(_rainfallCtrl.text) ?? 120.0;
-    final wind = double.tryParse(_windCtrl.text) ?? 65.0;
+    final wind = ref.read(windPresetProvider);
+    final rainfall = ref.read(rainfallPresetProvider);
     final prepWindowStr = ref.read(_prepWindowProvider);
     int prepWindow = 24;
     if (prepWindowStr == '1 Week')
@@ -78,8 +62,10 @@ class _SimulationSetupContentState
     // Save snapshot for display in run screen
     ref.read(simulationInputSnapshotProvider.notifier).state = {
       'profile': profile.label,
-      'rainfall_mm': rainfall,
-      'wind_kph': wind,
+      'wind_signal': wind.label,
+      'wind_kph': wind.windSpeedKph,
+      'rainfall_label': rainfall.label,
+      'rainfall_mm': rainfall.rainfallMm,
       'prep_hours': prepWindow,
     };
 
@@ -95,8 +81,8 @@ class _SimulationSetupContentState
       final response = await dio.post(
         '/api/v1/simulation/run',
         data: {
-          'wind_speed_kph': wind,
-          'precipitation_24h_mm': rainfall,
+          'wind_speed_kph': wind.windSpeedKph,
+          'precipitation_24h_mm': rainfall.rainfallMm,
           'preparation_window_hours': prepWindow,
           'storm_track_points': [
             [120.98, 14.60],
@@ -142,12 +128,9 @@ class _SimulationSetupContentState
 
   void _resetParameters() {
     ref.read(simProfileProvider.notifier).state = SimProfile.hydrologicFlood;
-    _rainfallCtrl.text = '120';
-    _windCtrl.text = '65';
-    ref.read(_rainfallProvider.notifier).state = '120';
-    ref.read(_windSpeedProvider.notifier).state = '65';
+    ref.read(windPresetProvider.notifier).state = defaultWindPreset;
+    ref.read(rainfallPresetProvider.notifier).state = defaultRainfallPreset;
     ref.read(_prepWindowProvider.notifier).state = '24 Hours';
-
   }
 
   @override
@@ -179,9 +162,51 @@ class _SimulationSetupContentState
                 _ProfileSelector(),
                 const SizedBox(height: 28),
 
-                // 2. Parameters
+                // 2. Wind Condition (TCWS)
                 const Text(
-                  '2. Set Scenario Parameters',
+                  '2. Wind Condition (TCWS)',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Select the Tropical Cyclone Wind Signal. This only affects wind speed.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF6B7280),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const _WindSignalSelector(),
+                const SizedBox(height: 28),
+
+                // 3. Rainfall Intensity
+                const Text(
+                  '3. 24-Hour Rainfall',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Select rainfall intensity based on the Heavy Rainfall Outlook. Independent of wind signal.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF6B7280),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const _RainfallSelector(),
+                const SizedBox(height: 28),
+
+                // 4. Additional Parameters
+                const Text(
+                  '4. Additional Parameters',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -189,10 +214,7 @@ class _SimulationSetupContentState
                   ),
                 ),
                 const SizedBox(height: 14),
-                _ParametersForm(
-                  rainfallCtrl: _rainfallCtrl,
-                  windCtrl: _windCtrl,
-                ),
+                const _AdditionalParametersForm(),
                 const SizedBox(height: 32),
 
                 // Footer buttons
@@ -256,7 +278,7 @@ class _SimulationSetupContentState
 }
 
 // -----------------------------------------------------------
-// Profile Selector
+// Profile Selector (unchanged)
 // -----------------------------------------------------------
 
 class _ProfileSelector extends ConsumerWidget {
@@ -430,22 +452,326 @@ class _ProfileCard extends StatelessWidget {
 }
 
 // -----------------------------------------------------------
-// Parameters Form
+// Wind Signal Selector (TCWS)
 // -----------------------------------------------------------
 
-class _ParametersForm extends ConsumerWidget {
-  final TextEditingController rainfallCtrl;
-  final TextEditingController windCtrl;
+class _WindSignalSelector extends ConsumerWidget {
+  const _WindSignalSelector();
 
-  const _ParametersForm({
-    required this.rainfallCtrl,
-    required this.windCtrl,
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selected = ref.watch(windPresetProvider);
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
+    if (isMobile) {
+      // Mobile: 2-column grid + last item full width if odd
+      return Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        children: windPresets.map((preset) {
+          return SizedBox(
+            width: (MediaQuery.of(context).size.width - 48 - 10) / 2,
+            child: _WindChip(
+              preset: preset,
+              isSelected: selected == preset,
+              onTap: () =>
+                  ref.read(windPresetProvider.notifier).state = preset,
+            ),
+          );
+        }).toList(),
+      );
+    }
+
+    return Row(
+      children: windPresets.map((preset) {
+        final isLast = preset == windPresets.last;
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(right: isLast ? 0 : 10),
+            child: _WindChip(
+              preset: preset,
+              isSelected: selected == preset,
+              onTap: () =>
+                  ref.read(windPresetProvider.notifier).state = preset,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _WindChip extends StatelessWidget {
+  final WindPreset preset;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _WindChip({
+    required this.preset,
+    required this.isSelected,
+    required this.onTap,
   });
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor =
+        isSelected ? const Color(0xFF0EA5E9) : const Color(0xFFE5E7EB);
+    final bgColor =
+        isSelected ? const Color(0xFFEFF6FF) : Colors.white;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: borderColor, width: isSelected ? 2 : 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  preset.icon,
+                  size: 18,
+                  color: isSelected
+                      ? const Color(0xFF0EA5E9)
+                      : const Color(0xFF6B7280),
+                ),
+                const Spacer(),
+                if (isSelected)
+                  Container(
+                    width: 18,
+                    height: 18,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF0EA5E9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check,
+                      size: 11,
+                      color: Colors.white,
+                    ),
+                  )
+                else
+                  Container(
+                    width: 18,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFFD1D5DB)),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              preset.label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: isSelected
+                    ? const Color(0xFF0EA5E9)
+                    : const Color(0xFF111827),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '${preset.windSpeedKph.toInt()} km/h',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: isSelected
+                    ? const Color(0xFF0369A1)
+                    : const Color(0xFF374151),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              preset.description,
+              style: const TextStyle(
+                fontSize: 10,
+                color: Color(0xFF9CA3AF),
+                height: 1.3,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// -----------------------------------------------------------
+// Rainfall Selector
+// -----------------------------------------------------------
+
+class _RainfallSelector extends ConsumerWidget {
+  const _RainfallSelector();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selected = ref.watch(rainfallPresetProvider);
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
+    if (isMobile) {
+      return Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        children: rainfallPresets.map((preset) {
+          return SizedBox(
+            width: (MediaQuery.of(context).size.width - 48 - 10) / 2,
+            child: _RainfallChip(
+              preset: preset,
+              isSelected: selected == preset,
+              onTap: () =>
+                  ref.read(rainfallPresetProvider.notifier).state = preset,
+            ),
+          );
+        }).toList(),
+      );
+    }
+
+    return Row(
+      children: rainfallPresets.map((preset) {
+        final isLast = preset == rainfallPresets.last;
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(right: isLast ? 0 : 10),
+            child: _RainfallChip(
+              preset: preset,
+              isSelected: selected == preset,
+              onTap: () =>
+                  ref.read(rainfallPresetProvider.notifier).state = preset,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _RainfallChip extends StatelessWidget {
+  final RainfallPreset preset;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _RainfallChip({
+    required this.preset,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor =
+        isSelected ? const Color(0xFF0EA5E9) : const Color(0xFFE5E7EB);
+    final bgColor =
+        isSelected ? const Color(0xFFEFF6FF) : Colors.white;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: borderColor, width: isSelected ? 2 : 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  preset.icon,
+                  size: 18,
+                  color: isSelected
+                      ? const Color(0xFF0EA5E9)
+                      : const Color(0xFF6B7280),
+                ),
+                const Spacer(),
+                if (isSelected)
+                  Container(
+                    width: 18,
+                    height: 18,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF0EA5E9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check,
+                      size: 11,
+                      color: Colors.white,
+                    ),
+                  )
+                else
+                  Container(
+                    width: 18,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFFD1D5DB)),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              preset.label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: isSelected
+                    ? const Color(0xFF0EA5E9)
+                    : const Color(0xFF111827),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '${preset.rainfallMm.toInt()} mm',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: isSelected
+                    ? const Color(0xFF0369A1)
+                    : const Color(0xFF374151),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              preset.description,
+              style: const TextStyle(
+                fontSize: 10,
+                color: Color(0xFF9CA3AF),
+                height: 1.3,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// -----------------------------------------------------------
+// Additional Parameters Form (Preparation Window only)
+// -----------------------------------------------------------
+
+class _AdditionalParametersForm extends ConsumerWidget {
+  const _AdditionalParametersForm();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final prepWindow = ref.watch(_prepWindowProvider);
-    final isMobile = MediaQuery.of(context).size.width < 768;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -457,145 +783,26 @@ class _ParametersForm extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row 1: Rainfall | Wind (stacked on mobile)
-          if (isMobile) ...[
-            _paramField(
-              label: '24h Rainfall (mm)',
-              hint: '120',
-              helper: 'GREEN: <180 | YELLOW: <360 | ORANGE: <720 | RED: 720+',
-              controller: rainfallCtrl,
-              suffix: 'mm',
-              isNumeric: true,
-            ),
-            const SizedBox(height: 16),
-            _paramField(
-              label: 'Wind Speed (km/h)',
-              hint: '65',
-              helper: 'TD: ≤61 | TS: 62-88 | TY: 118-184 | STY: ≥185',
-              controller: windCtrl,
-              suffix: 'km/h',
-              isNumeric: true,
-            ),
-          ] else ...[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: _paramField(
-                    label: '24h Rainfall (mm)',
-                    hint: '120',
-                    helper:
-                        'GREEN: <180 | YELLOW: <360 | ORANGE: <720 | RED: 720+',
-                    controller: rainfallCtrl,
-                    suffix: 'mm',
-                    isNumeric: true,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _paramField(
-                    label: 'Wind Speed (km/h)',
-                    hint: '65',
-                    helper: 'TD: ≤61 | TS: 62-88 | TY: 118-184 | STY: ≥185',
-                    controller: windCtrl,
-                    suffix: 'km/h',
-                    isNumeric: true,
-                  ),
-                ),
-              ],
-            ),
-          ],
-
-          const SizedBox(height: 20),
-
-          // Row 2: Preparation Window (stacked on mobile)
-          if (isMobile) ...[
-            _paramDropdown(
-              label: 'Preparation Window',
-              helper: 'Time available before impact',
-              value: prepWindow,
-              items: const [
-                '6 Hours',
-                '12 Hours',
-                '24 Hours',
-                '48 Hours',
-                '1 Week',
-                '2 Weeks',
-                '1 Month',
-                '3 Months',
-                '6 Months',
-              ],
-              onChanged: (v) =>
-                  ref.read(_prepWindowProvider.notifier).state = v!,
-            ),
-          ] else ...[
-            _paramDropdown(
-              label: 'Preparation Window',
-              helper: 'Time available before impact',
-              value: prepWindow,
-              items: const [
-                '6 Hours',
-                '12 Hours',
-                '24 Hours',
-                '48 Hours',
-                '1 Week',
-                '2 Weeks',
-                '1 Month',
-                '3 Months',
-                '6 Months',
-              ],
-              onChanged: (v) =>
-                  ref.read(_prepWindowProvider.notifier).state = v!,
-            ),
-          ],
+          _paramDropdown(
+            label: 'Preparation Window',
+            helper: 'Time available before impact',
+            value: prepWindow,
+            items: const [
+              '6 Hours',
+              '12 Hours',
+              '24 Hours',
+              '48 Hours',
+              '1 Week',
+              '2 Weeks',
+              '1 Month',
+              '3 Months',
+              '6 Months',
+            ],
+            onChanged: (v) =>
+                ref.read(_prepWindowProvider.notifier).state = v!,
+          ),
         ],
       ),
-    );
-  }
-
-  Widget _paramField({
-    required String label,
-    required String hint,
-    required String helper,
-    required TextEditingController controller,
-    String? suffix,
-    bool isNumeric = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF374151),
-          ),
-        ),
-        const SizedBox(height: 6),
-        TextField(
-          controller: controller,
-          keyboardType: isNumeric
-              ? const TextInputType.numberWithOptions(decimal: true)
-              : TextInputType.text,
-          inputFormatters: isNumeric
-              ? [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))]
-              : null,
-          decoration: InputDecoration(
-            hintText: hint,
-            suffixText: suffix,
-            suffixStyle: const TextStyle(
-              color: Color(0xFF6B7280),
-              fontSize: 12,
-            ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          helper,
-          style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
-        ),
-      ],
     );
   }
 
