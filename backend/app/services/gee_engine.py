@@ -3,16 +3,19 @@ ACTA Backend — Google Earth Engine Risk Analysis Engine
 ========================================================
 Production-grade risk score calculator using GEE's Python API.
 
-Combines three raster-based risk components:
-1. Water Accumulation Score — precipitation × runoff coefficient
-   derived from land cover imperviousness
-2. Elevation Factor — DEM-based slope/elevation vulnerability
-   from USGS SRTM 30m
-3. Historical Flood Frequency — Sentinel-1 SAR backscatter
-   analysis of known Manila flood events
+Combines six risk components into a composite score:
+1. Rainfall Intensity — PAGASA-calibrated 24h accumulation
+2. Wind Risk — PAGASA tropical cyclone intensity scale
+3. Elevation Factor — DEM-based slope/elevation vulnerability
+4. Historical Flood Frequency — Sentinel-1 SAR analysis
+5. Storm Surge — wind-driven coastal surge (PAGASA advisory)
+6. Drainage Capacity — urban imperviousness proxy
 
 Results are zonally reduced against barangay vector boundaries
 using ee.Reducer.mean() and classified into RED/YELLOW/GREEN tiers.
+
+A nonlinear synergy boost amplifies risk when both rainfall
+and wind are simultaneously extreme.
 """
 
 from __future__ import annotations
@@ -20,6 +23,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import math
 import time
 from pathlib import Path
 from typing import Any
@@ -28,9 +32,12 @@ from app.core.config import settings
 from app.core.pagasa_constants import (
     rainfall_risk_factor,
     wind_risk_factor,
+    storm_surge_factor,
     classify_wind,
     classify_rainfall,
     WIND_LABELS,
+    RiskModelConfig,
+    DEFAULT_RISK_CONFIG,
 )
 
 logger = logging.getLogger("acta.gee_engine")
@@ -140,9 +147,87 @@ RUNOFF_COEFFICIENTS = {
     "default": 0.80,
 }
 
-# Risk tier thresholds (normalized 0–1 scale).
-TIER_RED_THRESHOLD = 0.7
-TIER_YELLOW_THRESHOLD = 0.4
+# Manila Bay coastline reference points (lng, lat).
+# Used to calculate coastal distance for storm surge factor.
+# Runs roughly north-south along Manila Bay.
+MANILA_COASTLINE_POINTS = [
+    (120.9550, 14.6500),   # North end (Navotas border)
+    (120.9580, 14.6200),   # Tondo
+    (120.9600, 14.6000),   # Port Area
+    (120.9620, 14.5800),   # Ermita
+    (120.9650, 14.5600),   # Malate
+    (120.9680, 14.5400),   # South end (Pasay border)
+]
+
+# Active risk model configuration.
+# Can be overridden at runtime for recalibration.
+_active_config: RiskModelConfig = DEFAULT_RISK_CONFIG
+
+
+def get_risk_config() -> RiskModelConfig:
+    """Return the active risk model configuration."""
+    return _active_config
+
+
+def set_risk_config(config: RiskModelConfig) -> None:
+    """Override the active risk model configuration."""
+    global _active_config
+    config.validate()
+    _active_config = config
+
+
+def _compute_synergy_boost(
+    rainfall_factor: float,
+    wind_factor: float,
+    config: RiskModelConfig,
+) -> float:
+    """
+    Nonlinear amplification when BOTH rainfall AND wind are extreme.
+
+    Models the real-world observation that concurrent extreme rain
+    and wind produce compound flooding far worse than either alone:
+    - Wind drives storm surge and prevents drainage
+    - Rain saturates the ground, amplifying runoff
+    - Together they overwhelm all flood defenses
+
+    Returns a bonus in [0, config.synergy_multiplier].
+    """
+    if (
+        rainfall_factor >= config.synergy_rain_threshold
+        and wind_factor >= config.synergy_wind_threshold
+    ):
+        # Boost proportional to the WEAKER of the two extremes
+        # (the limiting factor determines compound severity)
+        return min(rainfall_factor, wind_factor) * config.synergy_multiplier
+    return 0.0
+
+
+def _estimate_coastal_distance_km(centroid_lng: float, centroid_lat: float) -> float:
+    """
+    Estimate distance (in km) from a point to the Manila Bay coastline
+    using the reference polyline. Uses haversine-approximate distance
+    to the nearest segment point.
+
+    Returns distance in kilometers.
+    """
+    min_dist_deg = float("inf")
+    for clng, clat in MANILA_COASTLINE_POINTS:
+        dist = math.sqrt((centroid_lng - clng) ** 2 + (centroid_lat - clat) ** 2)
+        min_dist_deg = min(min_dist_deg, dist)
+
+    # Convert degrees to approximate km at Manila's latitude (~14.6°N)
+    # 1° longitude ≈ 107 km, 1° latitude ≈ 111 km
+    # Average: ~109 km per degree
+    return min_dist_deg * 109.0
+
+
+def _classify_tier(total_risk: float, config: RiskModelConfig) -> str:
+    """Classify a 0-1 risk score into RED/YELLOW/GREEN tier."""
+    if total_risk >= config.tier_red:
+        return "RED"
+    elif total_risk >= config.tier_yellow:
+        return "YELLOW"
+    return "GREEN"
 
 
 # -----------------------------------------------------------
@@ -296,7 +381,8 @@ async def _gee_risk_analysis(
         flood_frequency = ee.Image.constant(0).clip(manila_roi)
 
     # 4. Composite Risk Score Raster (PAGASA-calibrated)
-    # Use PAGASA rainfall risk factor instead of arbitrary normalization.
+    config = get_risk_config()
+
     precip_risk = rainfall_risk_factor(precipitation_mm)
     runoff_coeff = RUNOFF_COEFFICIENTS["default"]
     water_accumulation = ee.Image.constant(
@@ -307,14 +393,30 @@ async def _gee_risk_analysis(
     wind_factor_val = wind_risk_factor(wind_speed_kph)
     wind_layer = ee.Image.constant(wind_factor_val).clip(manila_roi)
 
-    # Composite Risk = Water (0.40) + Elevation (0.25) + Historical (0.15) + Wind (0.20)
+    # Drainage factor: urban runoff coefficient as flood amplifier.
+    drainage_layer = ee.Image.constant(runoff_coeff).clip(manila_roi)
+
+    # Storm surge: uniform layer based on wind (distance applied per-barangay later)
+    # For GEE raster path, we approximate surge as a coastal gradient.
+    surge_base = storm_surge_factor(wind_speed_kph, 0.0)  # max surge at coast
+    surge_layer = ee.Image.constant(surge_base).clip(manila_roi)
+
+    # Composite Risk = Weighted sum of 6 components
     composite_risk = (
-        water_accumulation.multiply(0.40)
-        .add(elevation_factor.multiply(0.25))
-        .add(flood_frequency.multiply(0.15))
-        .add(wind_layer.multiply(0.20))
-        .clamp(0, 1)
+        water_accumulation.multiply(config.weight_rainfall)
+        .add(wind_layer.multiply(config.weight_wind))
+        .add(elevation_factor.multiply(config.weight_elevation))
+        .add(flood_frequency.multiply(config.weight_historical))
+        .add(surge_layer.multiply(config.weight_surge))
+        .add(drainage_layer.multiply(config.weight_drainage))
     )
+
+    # Apply synergy boost for extreme events
+    synergy = _compute_synergy_boost(precip_risk, wind_factor_val, config)
+    if synergy > 0:
+        composite_risk = composite_risk.add(ee.Image.constant(synergy))
+
+    composite_risk = composite_risk.clamp(0, 1)
 
     # 5. Zonal Reduction — Per-Barangay Scores
     scores = []
@@ -397,12 +499,7 @@ async def _gee_risk_analysis(
         hist = hist_results.get(brgy_id, 0) or 0
 
         # Classify tier.
-        if total_risk >= TIER_RED_THRESHOLD:
-            tier = "RED"
-        elif total_risk >= TIER_YELLOW_THRESHOLD:
-            tier = "YELLOW"
-        else:
-            tier = "GREEN"
+        tier = _classify_tier(total_risk, config)
 
         scores.append({
             "barangay_id": brgy_id,
@@ -452,21 +549,34 @@ def _analytical_risk_model(
 
     Uses barangay centroid coordinates to estimate relative elevation
     risk based on proximity to known low-lying areas and coastline.
-    The formula mirrors the GEE composite structure:
 
-    Risk = (Precipitation × Runoff) + (Elevation Factor) + (Historical Penalty)
+    Composite formula (6 components + synergy boost):
+      base = (
+          rainfall_factor   × W_RAIN  +
+          wind_factor        × W_WIND  +
+          elevation_factor   × W_ELEV  +
+          historical_freq    × W_HIST  +
+          surge_factor       × W_SURGE +
+          drainage_factor    × W_DRAIN
+      )
+      synergy = min(rain, wind) × 0.30  (when both exceed threshold)
+      total   = clamp(base + synergy, 0, 1)
     """
-    import math
+    config = get_risk_config()
 
     logger.info(
         "Using analytical fallback model: precip=%.0fmm, wind=%.0fkph",
         precipitation_mm, wind_speed_kph,
     )
 
-    # PAGASA-calibrated risk factors.
-    precip_risk = rainfall_risk_factor(precipitation_mm)
-    wind_risk = wind_risk_factor(wind_speed_kph)
-    runoff = precip_risk * RUNOFF_COEFFICIENTS["default"]
+    # PAGASA-calibrated risk factors (global, same for all barangays).
+    rain_factor = rainfall_risk_factor(precipitation_mm)
+    wind_factor = wind_risk_factor(wind_speed_kph)
+    runoff_coeff = RUNOFF_COEFFICIENTS["default"]
+    drainage_factor = runoff_coeff  # Urban imperviousness as drainage load
+
+    # Synergy boost (global).
+    synergy = _compute_synergy_boost(rain_factor, wind_factor, config)
 
     # Known historically vulnerable areas in Manila (centroid lng/lat).
     # These areas experienced severe flooding during Ondoy, Habagat, Ulysses.
@@ -513,41 +623,59 @@ def _analytical_risk_model(
         except Exception:
             centroid_lng, centroid_lat = 120.98, 14.59
 
-        # Elevation factor: proximity to coast (lower lng) and
-        # rivers (Pasig, Tullahan) indicates lower elevation.
-        coastal_proximity = max(0, 1.0 - abs(centroid_lng - 120.96) * 20)
-        river_proximity = max(0, 1.0 - abs(centroid_lat - 14.59) * 15)
-        elevation_factor = (coastal_proximity * 0.6 + river_proximity * 0.4) * 0.8
+        # --- Component 1: Elevation factor ---
+        # Proximity to coast (lower lng) and rivers (Pasig, Tullahan)
+        # indicates lower elevation → higher flood risk.
+        # FIX: Removed the * 0.8 cap that was suppressing scores.
+        # FIX: Reduced scale factors for wider influence radius.
+        coastal_proximity = max(
+            0, 1.0 - abs(centroid_lng - config.coastal_longitude_ref)
+            * config.coastal_proximity_scale
+        )
+        river_proximity = max(
+            0, 1.0 - abs(centroid_lat - config.river_latitude_ref)
+            * config.river_proximity_scale
+        )
+        elevation_factor = coastal_proximity * 0.6 + river_proximity * 0.4
 
-        # Historical frequency: distance to known flood-prone centroids.
+        # --- Component 2: Historical frequency ---
+        # Distance to known flood-prone centroids.
+        # FIX: decay_factor=200 instead of 50 for ~10km influence.
         min_distance = float("inf")
         for hlng, hlat in HIGH_RISK_CENTROIDS:
-            dist = math.sqrt((centroid_lng - hlng) ** 2 + (centroid_lat - hlat) ** 2)
+            dist = math.sqrt(
+                (centroid_lng - hlng) ** 2 + (centroid_lat - hlat) ** 2
+            )
             min_distance = min(min_distance, dist)
 
-        # Closer to historical flood areas = higher frequency penalty.
-        historical_freq = max(0, 1.0 - min_distance * 50) * 0.9
-
-        # Water accumulation: precipitation runoff.
-        water_score = runoff
-
-        # Composite risk (PAGASA-aligned weights matching GEE model).
-        # Water (0.40) + Elevation (0.25) + Historical (0.15) + Wind (0.20)
-        total_risk = (
-            water_score * 0.40
-            + elevation_factor * 0.25
-            + historical_freq * 0.15
-            + wind_risk * 0.20
+        historical_freq = (
+            max(0, 1.0 - min_distance * config.historical_decay_factor)
+            * config.historical_max_penalty
         )
-        total_risk = max(0.0, min(1.0, total_risk))
+
+        # --- Component 3: Storm surge ---
+        coastal_dist_km = _estimate_coastal_distance_km(
+            centroid_lng, centroid_lat
+        )
+        surge = storm_surge_factor(wind_speed_kph, coastal_dist_km)
+
+        # --- Component 4: Rainfall (water accumulation) ---
+        water_score = rain_factor * runoff_coeff
+
+        # --- Composite risk score ---
+        base_score = (
+            water_score      * config.weight_rainfall
+            + wind_factor    * config.weight_wind
+            + elevation_factor * config.weight_elevation
+            + historical_freq * config.weight_historical
+            + surge          * config.weight_surge
+            + drainage_factor * config.weight_drainage
+        )
+
+        total_risk = max(0.0, min(1.0, base_score + synergy))
 
         # Classify tier.
-        if total_risk >= TIER_RED_THRESHOLD:
-            tier = "RED"
-        elif total_risk >= TIER_YELLOW_THRESHOLD:
-            tier = "YELLOW"
-        else:
-            tier = "GREEN"
+        tier = _classify_tier(total_risk, config)
 
         scores.append({
             "barangay_id": brgy_id,

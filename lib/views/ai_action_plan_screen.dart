@@ -24,12 +24,7 @@ import 'app_shell.dart';
 /// Whether the plan has been approved.
 final planApprovedProvider = StateProvider<bool>((ref) => false);
 
-/// PDF export loading state.
-final exportLoadingProvider = StateProvider<bool>((ref) => false);
-
 const _kManilaCtr = LatLng(14.5928, 120.9762);
-
-
 
 // Evacuation center markers
 final _evacMarkers = [
@@ -55,7 +50,8 @@ class AiActionPlanContent extends ConsumerStatefulWidget {
   const AiActionPlanContent({super.key});
 
   @override
-  ConsumerState<AiActionPlanContent> createState() => _AiActionPlanContentState();
+  ConsumerState<AiActionPlanContent> createState() =>
+      _AiActionPlanContentState();
 }
 
 class _AiActionPlanContentState extends ConsumerState<AiActionPlanContent> {
@@ -73,7 +69,8 @@ class _AiActionPlanContentState extends ConsumerState<AiActionPlanContent> {
           actions: [
             OutlinedButton.icon(
               onPressed: () {
-                ref.read(simulationRunStateProvider.notifier).state = SimulationRunState.idle;
+                ref.read(simulationRunStateProvider.notifier).state =
+                    SimulationRunState.idle;
                 ref.read(simulationResultProvider.notifier).state = null;
                 ref.read(simulationRunIdProvider.notifier).state = null;
                 ref.read(shellIndexProvider.notifier).state = 1;
@@ -84,9 +81,7 @@ class _AiActionPlanContentState extends ConsumerState<AiActionPlanContent> {
             const SizedBox(width: 12),
             ElevatedButton.icon(
               onPressed: simResult != null
-                  ? () => ref
-                      .read(shellIndexProvider.notifier)
-                      .state = 4
+                  ? () => ref.read(shellIndexProvider.notifier).state = 4
                   : null,
               icon: const Icon(Icons.article_outlined, size: 15),
               label: const Text('Generate Report'),
@@ -99,7 +94,10 @@ class _AiActionPlanContentState extends ConsumerState<AiActionPlanContent> {
         Expanded(
           child: simResult == null
               ? _EmptyState()
-              : _ActionPlanBody(simResult: simResult, barangaysAsync: barangaysAsync),
+              : _ActionPlanBody(
+                  simResult: simResult,
+                  barangaysAsync: barangaysAsync,
+                ),
         ),
       ],
     );
@@ -123,15 +121,21 @@ class _EmptyState extends ConsumerWidget {
               color: const Color(0xFFF0FDF4),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.auto_awesome_outlined,
-                size: 48, color: Color(0xFF16A34A)),
+            child: const Icon(
+              Icons.auto_awesome_outlined,
+              size: 48,
+              color: Color(0xFF16A34A),
+            ),
           ),
           const SizedBox(height: 20),
-          const Text('No Action Plan Generated',
-              style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF111827))),
+          const Text(
+            'No Action Plan Generated',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF111827),
+            ),
+          ),
           const SizedBox(height: 6),
           const Text(
             'Run a simulation to generate an AI-powered action plan',
@@ -139,8 +143,7 @@ class _EmptyState extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: () =>
-                ref.read(shellIndexProvider.notifier).state = 1,
+            onPressed: () => ref.read(shellIndexProvider.notifier).state = 1,
             icon: const Icon(Icons.science_outlined, size: 18),
             label: const Text('Go to Simulation Setup'),
           ),
@@ -158,7 +161,10 @@ class _ActionPlanBody extends ConsumerWidget {
   final SimulationOutput simResult;
   final AsyncValue<List<BarangayPolygon>> barangaysAsync;
 
-  const _ActionPlanBody({required this.simResult, required this.barangaysAsync});
+  const _ActionPlanBody({
+    required this.simResult,
+    required this.barangaysAsync,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -235,10 +241,7 @@ class _ActionPlanMap extends StatelessWidget {
   final SimulationOutput simResult;
   final AsyncValue<List<BarangayPolygon>> barangaysAsync;
 
-  const _ActionPlanMap({
-    required this.simResult,
-    required this.barangaysAsync,
-  });
+  const _ActionPlanMap({required this.simResult, required this.barangaysAsync});
 
   @override
   Widget build(BuildContext context) {
@@ -268,14 +271,26 @@ class _ActionPlanMap extends StatelessWidget {
             ),
             MarkerLayer(
               markers: [
-                ..._evacMarkers.map((ll) => Marker(
-                  point: ll,
-                  child: const Icon(Icons.home, size: 20, color: Color(0xFF6D28D9)),
-                )),
-                ..._pumpMarkers.map((ll) => Marker(
-                  point: ll,
-                  child: const Icon(Icons.water_drop, size: 20, color: Color(0xFF0EA5E9)),
-                )),
+                ..._evacMarkers.map(
+                  (ll) => Marker(
+                    point: ll,
+                    child: const Icon(
+                      Icons.home,
+                      size: 20,
+                      color: Color(0xFF6D28D9),
+                    ),
+                  ),
+                ),
+                ..._pumpMarkers.map(
+                  (ll) => Marker(
+                    point: ll,
+                    child: const Icon(
+                      Icons.water_drop,
+                      size: 20,
+                      color: Color(0xFF0EA5E9),
+                    ),
+                  ),
+                ),
               ],
             ),
           ],
@@ -295,11 +310,14 @@ class _ActionPlanMap extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Action Priority',
-                    style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF374151))),
+                const Text(
+                  'Action Priority',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF374151),
+                  ),
+                ),
                 const SizedBox(height: 5),
                 _legItem(const Color(0xFFDC2626), 'Critical Priority'),
                 _legItem(const Color(0xFFF97316), 'High Priority'),
@@ -316,15 +334,24 @@ class _ActionPlanMap extends StatelessWidget {
   Widget _legItem(Color c, String label) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 3),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Container(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
             width: 10,
             height: 10,
-            decoration:
-                BoxDecoration(color: c, borderRadius: BorderRadius.circular(2))),
-        const SizedBox(width: 5),
-        Text(label, style: const TextStyle(fontSize: 10, color: Color(0xFF374151))),
-      ]),
+            decoration: BoxDecoration(
+              color: c,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 10, color: Color(0xFF374151)),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -340,7 +367,20 @@ class _CompletedBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     final label =
         'Manila Flash Flood Simulation | ${months[now.month - 1]} ${now.day}, ${now.year}  '
         '${now.hour > 12 ? now.hour - 12 : now.hour}:${now.minute.toString().padLeft(2, '0')} '
@@ -360,20 +400,31 @@ class _CompletedBanner extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.check_circle, color: Color(0xFF16A34A), size: 20),
+                    const Icon(
+                      Icons.check_circle,
+                      color: Color(0xFF16A34A),
+                      size: 20,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Simulation Completed',
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF15803D))),
-                          Text(label,
-                              style: const TextStyle(
-                                  fontSize: 11, color: Color(0xFF4ADE80))),
+                          const Text(
+                            'Simulation Completed',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF15803D),
+                            ),
+                          ),
+                          Text(
+                            label,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF4ADE80),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -384,11 +435,15 @@ class _CompletedBanner extends StatelessWidget {
                   width: double.infinity,
                   child: TextButton.icon(
                     onPressed: onViewResults,
-                    icon: const Icon(Icons.open_in_new,
-                        size: 13, color: Color(0xFF16A34A)),
-                    label: const Text('View Simulation Results',
-                        style: TextStyle(
-                            color: Color(0xFF16A34A), fontSize: 12)),
+                    icon: const Icon(
+                      Icons.open_in_new,
+                      size: 13,
+                      color: Color(0xFF16A34A),
+                    ),
+                    label: const Text(
+                      'View Simulation Results',
+                      style: TextStyle(color: Color(0xFF16A34A), fontSize: 12),
+                    ),
                     style: TextButton.styleFrom(
                       alignment: Alignment.centerLeft,
                       padding: EdgeInsets.zero,
@@ -399,29 +454,44 @@ class _CompletedBanner extends StatelessWidget {
             )
           : Row(
               children: [
-                const Icon(Icons.check_circle, color: Color(0xFF16A34A), size: 20),
+                const Icon(
+                  Icons.check_circle,
+                  color: Color(0xFF16A34A),
+                  size: 20,
+                ),
                 const SizedBox(width: 10),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Simulation Completed',
-                        style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF15803D))),
-                    Text(label,
-                        style: const TextStyle(
-                            fontSize: 11, color: Color(0xFF4ADE80))),
+                    const Text(
+                      'Simulation Completed',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF15803D),
+                      ),
+                    ),
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF4ADE80),
+                      ),
+                    ),
                   ],
                 ),
                 const Spacer(),
                 TextButton.icon(
                   onPressed: onViewResults,
-                  icon: const Icon(Icons.open_in_new,
-                      size: 13, color: Color(0xFF16A34A)),
-                  label: const Text('View Simulation Results',
-                      style: TextStyle(
-                          color: Color(0xFF16A34A), fontSize: 12)),
+                  icon: const Icon(
+                    Icons.open_in_new,
+                    size: 13,
+                    color: Color(0xFF16A34A),
+                  ),
+                  label: const Text(
+                    'View Simulation Results',
+                    style: TextStyle(color: Color(0xFF16A34A), fontSize: 12),
+                  ),
                 ),
               ],
             ),
@@ -439,14 +509,16 @@ class _PlanSummaryCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final totalTasks = result.taskList.length;
-    final highPriority =
-        result.taskList.where((t) => t.priority == 'HIGH').length;
-    final moderatePriority =
-        result.taskList.where((t) => t.priority == 'MEDIUM').length;
-    final lowPriority =
-        result.taskList.where((t) => t.priority == 'LOW').length;
+    final highPriority = result.taskList
+        .where((t) => t.priority == 'HIGH')
+        .length;
+    final moderatePriority = result.taskList
+        .where((t) => t.priority == 'MEDIUM')
+        .length;
+    final lowPriority = result.taskList
+        .where((t) => t.priority == 'LOW')
+        .length;
     final isApproved = ref.watch(planApprovedProvider);
-    final isExporting = ref.watch(exportLoadingProvider);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -454,27 +526,37 @@ class _PlanSummaryCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Overall Plan Summary',
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF111827))),
+          const Text(
+            'Overall Plan Summary',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF111827),
+            ),
+          ),
           const SizedBox(height: 10),
           const Divider(height: 1, color: Color(0xFFE5E7EB)),
           const SizedBox(height: 10),
 
           _summaryRow('Total Recommended Actions', '$totalTasks', null),
-          _summaryRow('High Priority Actions', '$highPriority',
-              const Color(0xFFDC2626)),
-          _summaryRow('Moderate Priority Actions', '$moderatePriority',
-              const Color(0xFFF59E0B)),
-          _summaryRow('Low Priority Actions', '$lowPriority',
-              const Color(0xFF16A34A)),
+          _summaryRow(
+            'High Priority Actions',
+            '$highPriority',
+            const Color(0xFFDC2626),
+          ),
+          _summaryRow(
+            'Moderate Priority Actions',
+            '$moderatePriority',
+            const Color(0xFFF59E0B),
+          ),
+          _summaryRow(
+            'Low Priority Actions',
+            '$lowPriority',
+            const Color(0xFF16A34A),
+          ),
           const Divider(height: 16, color: Color(0xFFE5E7EB)),
-          _summaryRow(
-              'Estimate Resources Needed', '₱ 18.6 M', null),
-          _summaryRow(
-              'Estimate People Reached', '670,420', null),
+          _summaryRow('Estimate Resources Needed', '₱ 18.6 M', null),
+          _summaryRow('Estimate People Reached', '670,420', null),
 
           const SizedBox(height: 16),
 
@@ -484,43 +566,29 @@ class _PlanSummaryCard extends ConsumerWidget {
             child: isApproved
                 ? OutlinedButton.icon(
                     onPressed: () =>
-                        ref.read(planApprovedProvider.notifier).state =
-                            false,
-                    icon: const Icon(Icons.check_circle,
-                        size: 15, color: Color(0xFF16A34A)),
-                    label: const Text('Plan Approved ✓',
-                        style: TextStyle(color: Color(0xFF16A34A))),
+                        ref.read(planApprovedProvider.notifier).state = false,
+                    icon: const Icon(
+                      Icons.check_circle,
+                      size: 15,
+                      color: Color(0xFF16A34A),
+                    ),
+                    label: const Text(
+                      'Plan Approved ✓',
+                      style: TextStyle(color: Color(0xFF16A34A)),
+                    ),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Color(0xFF16A34A)),
                     ),
                   )
                 : ElevatedButton.icon(
                     onPressed: () =>
-                        ref.read(planApprovedProvider.notifier).state =
-                            true,
+                        ref.read(planApprovedProvider.notifier).state = true,
                     icon: const Icon(Icons.thumb_up_outlined, size: 15),
                     label: const Text('Approve Plan'),
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF16A34A)),
+                      backgroundColor: const Color(0xFF16A34A),
+                    ),
                   ),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: isExporting
-                  ? null
-                  : () {
-                      // TODO: Export PDF via /api/v1/simulation/export-pdf
-                    },
-              icon: isExporting
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.picture_as_pdf_outlined, size: 15),
-              label: Text(isExporting ? 'Generating...' : 'Export PDF'),
-            ),
           ),
         ],
       ),
@@ -533,14 +601,19 @@ class _PlanSummaryCard extends ConsumerWidget {
       child: Row(
         children: [
           Expanded(
-              child: Text(label,
-                  style: const TextStyle(
-                      fontSize: 12, color: Color(0xFF6B7280)))),
-          Text(value,
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: valueColor ?? const Color(0xFF111827))),
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: valueColor ?? const Color(0xFF111827),
+            ),
+          ),
         ],
       ),
     );
@@ -579,15 +652,21 @@ class _AiSummaryCard extends StatelessWidget {
                   ),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.auto_awesome,
-                    size: 16, color: Colors.white),
+                child: const Icon(
+                  Icons.auto_awesome,
+                  size: 16,
+                  color: Colors.white,
+                ),
               ),
               const SizedBox(width: 10),
-              const Text('AI Summary',
-                  style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF111827))),
+              const Text(
+                'AI Summary',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF111827),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 14),
@@ -598,9 +677,10 @@ class _AiSummaryCard extends StatelessWidget {
                   ? result.explainabilityCard.summary
                   : 'Based on the simulation, ${result.impactedBarangays.length} barangays are at high to critical risk of flood impact. Immediate actions on evacuation, pumping operations, and traffic management will significantly reduce potential impact on the population.',
               style: const TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF374151),
-                  height: 1.6),
+                fontSize: 13,
+                color: Color(0xFF374151),
+                height: 1.6,
+              ),
             ),
             const SizedBox(height: 16),
             Wrap(
@@ -646,9 +726,10 @@ class _AiSummaryCard extends StatelessWidget {
                         ? result.explainabilityCard.summary
                         : 'Based on the simulation, ${result.impactedBarangays.length} barangays are at high to critical risk of flood impact. Immediate actions on evacuation, pumping operations, and traffic management will significantly reduce potential impact on the population.',
                     style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF374151),
-                        height: 1.6),
+                      fontSize: 13,
+                      color: Color(0xFF374151),
+                      height: 1.6,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 20),
@@ -694,10 +775,19 @@ class _AiSummaryCard extends StatelessWidget {
   }
 
   Widget _statChip(
-      BuildContext context, IconData icon, String value, String label, Color color, Color bg) {
+    BuildContext context,
+    IconData icon,
+    String value,
+    String label,
+    Color color,
+    Color bg,
+  ) {
     final isMobile = MediaQuery.of(context).size.width < 768;
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 16, vertical: 12),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 8 : 16,
+        vertical: 12,
+      ),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(10),
@@ -707,17 +797,20 @@ class _AiSummaryCard extends StatelessWidget {
         children: [
           Icon(icon, color: color, size: isMobile ? 20 : 24),
           const SizedBox(height: 6),
-          Text(value,
-              style: TextStyle(
-                  fontSize: isMobile ? 16 : 20,
-                  fontWeight: FontWeight.w800,
-                  color: color)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: isMobile ? 16 : 20,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(label,
-              style: const TextStyle(
-                  fontSize: 9,
-                  color: Color(0xFF6B7280)),
-              textAlign: TextAlign.center),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 9, color: Color(0xFF6B7280)),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
@@ -734,8 +827,9 @@ final _cardDecoration = BoxDecoration(
   border: Border.all(color: const Color(0xFFE5E7EB)),
   boxShadow: [
     BoxShadow(
-        color: Colors.black.withValues(alpha: 0.04),
-        blurRadius: 4,
-        offset: const Offset(0, 1)),
+      color: Colors.black.withValues(alpha: 0.04),
+      blurRadius: 4,
+      offset: const Offset(0, 1),
+    ),
   ],
 );

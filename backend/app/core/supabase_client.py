@@ -102,13 +102,17 @@ def bulk_insert_risk_scores(
     ]
 
     try:
-        # Single bulk insert — Supabase REST API handles batching.
-        result = (
-            client.table("barangay_risk_scores")
-            .upsert(records, on_conflict="run_id,barangay_id")
-            .execute()
-        )
-        inserted = len(result.data) if result.data else 0
+        inserted = 0
+        chunk_size = 200
+        for i in range(0, len(records), chunk_size):
+            chunk = records[i:i + chunk_size]
+            result = (
+                client.table("barangay_risk_scores")
+                .upsert(chunk, on_conflict="run_id,barangay_id")
+                .execute()
+            )
+            inserted += len(result.data) if result.data else 0
+
         logger.info(
             "Bulk-inserted %d risk scores for run %s.", inserted, run_id
         )

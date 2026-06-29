@@ -44,6 +44,9 @@ int _progressToStep(int pct) {
   return 4;
 }
 
+const _progressAnimationDuration = Duration(milliseconds: 900);
+const _progressAnimationCurve = Curves.easeInOutCubic;
+
 // -----------------------------------------------------------
 // Run Simulation Content
 // -----------------------------------------------------------
@@ -56,14 +59,15 @@ class RunSimulationContent extends ConsumerStatefulWidget {
       _RunSimulationContentState();
 }
 
-class _RunSimulationContentState
-    extends ConsumerState<RunSimulationContent> {
+class _RunSimulationContentState extends ConsumerState<RunSimulationContent> {
   Timer? _pollTimer;
-  final Dio _dio = Dio(BaseOptions(
-    baseUrl: 'https://acta-production.up.railway.app',
-    connectTimeout: const Duration(seconds: 60),
-    receiveTimeout: const Duration(seconds: 30),
-  ));
+  final Dio _dio = Dio(
+    BaseOptions(
+      baseUrl: 'https://acta-production.up.railway.app',
+      connectTimeout: const Duration(seconds: 60),
+      receiveTimeout: const Duration(seconds: 30),
+    ),
+  );
 
   @override
   void initState() {
@@ -118,8 +122,7 @@ class _RunSimulationContentState
 
       if (response.statusCode == 200 && response.data != null) {
         ref.read(simulationResultProvider.notifier).state =
-            SimulationOutput.fromJson(
-                response.data as Map<String, dynamic>);
+            SimulationOutput.fromJson(response.data as Map<String, dynamic>);
       }
       ref.read(simulationRunStateProvider.notifier).state =
           SimulationRunState.completed;
@@ -239,15 +242,19 @@ class _RunSimulationContentState
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.error_outline,
-                            color: Color(0xFFDC2626)),
+                        const Icon(
+                          Icons.error_outline,
+                          color: Color(0xFFDC2626),
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             ref.watch(simulationErrorProvider) ??
                                 'An error occurred',
                             style: const TextStyle(
-                                color: Color(0xFFDC2626), fontSize: 13),
+                              color: Color(0xFFDC2626),
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                       ],
@@ -307,8 +314,14 @@ class _StepperBar extends StatelessWidget {
                     width: 24,
                     height: 24,
                     decoration: const BoxDecoration(
-                        color: Color(0xFF16A34A), shape: BoxShape.circle),
-                    child: const Icon(Icons.check, color: Colors.white, size: 12),
+                      color: Color(0xFF16A34A),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check,
+                      color: Colors.white,
+                      size: 12,
+                    ),
                   );
                 } else if (isActive) {
                   badge = Container(
@@ -319,11 +332,14 @@ class _StepperBar extends StatelessWidget {
                       shape: BoxShape.circle,
                     ),
                     child: Center(
-                      child: Text('${i + 1}',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700)),
+                      child: Text(
+                        '${i + 1}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   );
                 } else {
@@ -335,11 +351,14 @@ class _StepperBar extends StatelessWidget {
                       border: Border.all(color: const Color(0xFFD1D5DB)),
                     ),
                     child: Center(
-                      child: Text('${i + 1}',
-                          style: const TextStyle(
-                              color: Color(0xFF9CA3AF),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700)),
+                      child: Text(
+                        '${i + 1}',
+                        style: const TextStyle(
+                          color: Color(0xFF9CA3AF),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   );
                 }
@@ -353,7 +372,9 @@ class _StepperBar extends StatelessWidget {
                           child: Container(
                             height: 2,
                             margin: const EdgeInsets.symmetric(horizontal: 4),
-                            color: isDone ? const Color(0xFF16A34A) : const Color(0xFFE5E7EB),
+                            color: isDone
+                                ? const Color(0xFF16A34A)
+                                : const Color(0xFFE5E7EB),
                           ),
                         ),
                     ],
@@ -397,7 +418,9 @@ class _StepperBar extends StatelessWidget {
               width: 28,
               height: 28,
               decoration: const BoxDecoration(
-                  color: Color(0xFF16A34A), shape: BoxShape.circle),
+                color: Color(0xFF16A34A),
+                shape: BoxShape.circle,
+              ),
               child: const Icon(Icons.check, color: Colors.white, size: 14),
             );
           } else if (isActive) {
@@ -410,11 +433,14 @@ class _StepperBar extends StatelessWidget {
                 border: Border.all(color: const Color(0xFF16A34A), width: 2),
               ),
               child: Center(
-                child: Text('${i + 1}',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700)),
+                child: Text(
+                  '${i + 1}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             );
           } else {
@@ -426,11 +452,14 @@ class _StepperBar extends StatelessWidget {
                 border: Border.all(color: const Color(0xFFD1D5DB)),
               ),
               child: Center(
-                child: Text('${i + 1}',
-                    style: const TextStyle(
-                        color: Color(0xFF9CA3AF),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700)),
+                child: Text(
+                  '${i + 1}',
+                  style: const TextStyle(
+                    color: Color(0xFF9CA3AF),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             );
           }
@@ -445,19 +474,25 @@ class _StepperBar extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(step.$1,
-                            style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: isPending
-                                    ? const Color(0xFF9CA3AF)
-                                    : const Color(0xFF111827))),
-                        Text(step.$2,
-                            style: TextStyle(
-                                fontSize: 10,
-                                color: isActive
-                                    ? const Color(0xFF16A34A)
-                                    : const Color(0xFF9CA3AF))),
+                        Text(
+                          step.$1,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: isPending
+                                ? const Color(0xFF9CA3AF)
+                                : const Color(0xFF111827),
+                          ),
+                        ),
+                        Text(
+                          step.$2,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isActive
+                                ? const Color(0xFF16A34A)
+                                : const Color(0xFF9CA3AF),
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -516,26 +551,39 @@ class _MapCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
             child: Row(
               children: [
-                const Text('Simulated Flood Inundation Map',
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF111827))),
+                const Text(
+                  'Simulated Flood Inundation Map',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF111827),
+                  ),
+                ),
                 const Spacer(),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0EA5E9).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '$progressPct%',
-                    style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF0EA5E9)),
-                  ),
+                TweenAnimationBuilder<double>(
+                  tween: Tween<double>(end: progressPct.toDouble()),
+                  duration: _progressAnimationDuration,
+                  curve: _progressAnimationCurve,
+                  builder: (context, animatedPct, _) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0EA5E9).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${animatedPct.round()}%',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0EA5E9),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -545,15 +593,22 @@ class _MapCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: progressPct / 100.0,
-                minHeight: 4,
-                backgroundColor: const Color(0xFFE5E7EB),
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  progressPct >= 100
-                      ? const Color(0xFF16A34A)
-                      : const Color(0xFF0EA5E9),
-                ),
+              child: TweenAnimationBuilder<double>(
+                tween: Tween<double>(end: progressPct / 100.0),
+                duration: _progressAnimationDuration,
+                curve: _progressAnimationCurve,
+                builder: (context, animatedValue, _) {
+                  return LinearProgressIndicator(
+                    value: animatedValue.clamp(0.0, 1.0),
+                    minHeight: 4,
+                    backgroundColor: const Color(0xFFE5E7EB),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      progressPct >= 100
+                          ? const Color(0xFF16A34A)
+                          : const Color(0xFF0EA5E9),
+                    ),
+                  );
+                },
               ),
             ),
           ),
@@ -578,7 +633,10 @@ class _MapCard extends StatelessWidget {
                   ),
                   barangaysAsync.when(
                     data: (barangays) => PolygonLayer(
-                      polygons: buildBarangayMapPolygons(barangays, riskMap: riskMap),
+                      polygons: buildBarangayMapPolygons(
+                        barangays,
+                        riskMap: riskMap,
+                      ),
                     ),
                     loading: () => const PolygonLayer(polygons: <Polygon>[]),
                     error: (_, __) => const PolygonLayer(polygons: <Polygon>[]),
@@ -591,14 +649,20 @@ class _MapCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
             child: Row(
               children: [
-                const Icon(Icons.info_outline, size: 13, color: Color(0xFF9CA3AF)),
+                const Icon(
+                  Icons.info_outline,
+                  size: 13,
+                  color: Color(0xFF9CA3AF),
+                ),
                 const SizedBox(width: 6),
                 Text(
                   simResult == null
                       ? 'Barangay polygons will be colored once simulation completes.'
                       : 'Map updated with simulation risk layers.',
-                  style:
-                      const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF9CA3AF),
+                  ),
                 ),
               ],
             ),
@@ -632,27 +696,39 @@ class _SimSummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Simulation Summary',
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF111827))),
+          const Text(
+            'Simulation Summary',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF111827),
+            ),
+          ),
           const SizedBox(height: 10),
-          _row(Icons.flood_outlined, 'Profile',
-              get('profile', 'Hydrologic Flood')),
-          _row(Icons.water_drop_outlined, 'Rainfall Volume',
-              '${get('rainfall_mm', '120')} mm'),
-          _row(Icons.air, 'Wind Speed',
-              '${get('wind_kph', '65')} km/h'),
-          _row(Icons.location_city_outlined, 'Coverage',
-              'All 897 Barangays'),
-          _row(Icons.water_outlined, 'Pumping Stations',
-              get('pumping_status', '3 Offline')),
-          _row(Icons.directions_boat_outlined, 'Rescue Assets',
-              get('rescue_assets', '12 Boats')),
+          _row(
+            Icons.flood_outlined,
+            'Profile',
+            get('profile', 'Hydrologic Flood'),
+          ),
+          _row(
+            Icons.water_drop_outlined,
+            'Rainfall Volume',
+            '${get('rainfall_mm', '120')} mm',
+          ),
+          _row(Icons.air, 'Wind Speed', '${get('wind_kph', '65')} km/h'),
+          _row(Icons.location_city_outlined, 'Coverage', 'All 897 Barangays'),
+          _row(
+            Icons.water_outlined,
+            'Pumping Stations',
+            get('pumping_status', '3 Offline'),
+          ),
+          _row(
+            Icons.directions_boat_outlined,
+            'Rescue Assets',
+            get('rescue_assets', '12 Boats'),
+          ),
           const Divider(height: 16, color: Color(0xFFE5E7EB)),
-          _row(Icons.access_time, 'Start Time',
-              _nowLabel()),
+          _row(Icons.access_time, 'Start Time', _nowLabel()),
         ],
       ),
     );
@@ -663,8 +739,20 @@ class _SimSummaryCard extends StatelessWidget {
     return '${_month(now.month)} ${now.day}, ${now.year}  ${_time(now)}';
   }
 
-  String _month(int m) =>
-      ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m-1];
+  String _month(int m) => [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ][m - 1];
 
   String _time(DateTime d) {
     final h = d.hour > 12 ? d.hour - 12 : (d.hour == 0 ? 12 : d.hour);
@@ -681,17 +769,21 @@ class _SimSummaryCard extends StatelessWidget {
           Icon(icon, size: 13, color: const Color(0xFF9CA3AF)),
           const SizedBox(width: 6),
           Expanded(
-            child: Text(label,
-                style: const TextStyle(
-                    fontSize: 11, color: Color(0xFF6B7280))),
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
+            ),
           ),
           Flexible(
-            child: Text(value,
-                style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF111827)),
-                textAlign: TextAlign.right),
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF111827),
+              ),
+              textAlign: TextAlign.right,
+            ),
           ),
         ],
       ),
@@ -725,18 +817,29 @@ class _ModelProgressCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Text('Model Progress',
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF111827))),
+              const Text(
+                'Model Progress',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF111827),
+                ),
+              ),
               const Spacer(),
-              Text(
-                '$progressPct%',
-                style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF0EA5E9)),
+              TweenAnimationBuilder<double>(
+                tween: Tween<double>(end: progressPct.toDouble()),
+                duration: _progressAnimationDuration,
+                curve: _progressAnimationCurve,
+                builder: (context, animatedPct, _) {
+                  return Text(
+                    '${animatedPct.round()}%',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0EA5E9),
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -757,14 +860,14 @@ class _ModelProgressCard extends StatelessWidget {
     final color = isDone
         ? const Color(0xFF16A34A)
         : isActive
-            ? const Color(0xFF0EA5E9)
-            : const Color(0xFF9CA3AF);
+        ? const Color(0xFF0EA5E9)
+        : const Color(0xFF9CA3AF);
 
     final statusText = isDone
         ? 'Completed'
         : isActive
-            ? 'In progress ...'
-            : 'Pending';
+        ? 'In progress ...'
+        : 'Pending';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -774,19 +877,26 @@ class _ModelProgressCard extends StatelessWidget {
             isDone
                 ? Icons.check_circle_outline
                 : isActive
-                    ? Icons.radio_button_checked
-                    : Icons.radio_button_unchecked,
+                ? Icons.radio_button_checked
+                : Icons.radio_button_unchecked,
             size: 16,
             color: color,
           ),
           const SizedBox(width: 8),
           Expanded(
-              child: Text(label,
-                  style: const TextStyle(
-                      fontSize: 12, color: Color(0xFF374151)))),
-          Text(statusText,
-              style: TextStyle(
-                  fontSize: 11, color: color, fontWeight: FontWeight.w600)),
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF374151)),
+            ),
+          ),
+          Text(
+            statusText,
+            style: TextStyle(
+              fontSize: 11,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -818,24 +928,29 @@ class _WhatNextBanner extends StatelessWidget {
               color: const Color(0xFF0EA5E9).withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.info_outline,
-                color: Color(0xFF0EA5E9), size: 18),
+            child: const Icon(
+              Icons.info_outline,
+              color: Color(0xFF0EA5E9),
+              size: 18,
+            ),
           ),
           const SizedBox(width: 14),
           const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('What happens next?',
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF111827))),
+                Text(
+                  'What happens next?',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF111827),
+                  ),
+                ),
                 SizedBox(height: 2),
                 Text(
                   'Once the simulation is complete, ACTA can generate an AI-prioritized action plan',
-                  style:
-                      TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                  style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
                 ),
               ],
             ),
@@ -844,8 +959,10 @@ class _WhatNextBanner extends StatelessWidget {
           OutlinedButton.icon(
             onPressed: onCancel,
             icon: const Icon(Icons.close, size: 14, color: Color(0xFFDC2626)),
-            label: const Text('Cancel Simulation',
-                style: TextStyle(color: Color(0xFFDC2626))),
+            label: const Text(
+              'Cancel Simulation',
+              style: TextStyle(color: Color(0xFFDC2626)),
+            ),
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: Color(0xFFDC2626)),
             ),
