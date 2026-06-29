@@ -119,7 +119,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           );
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const AppShell()),
+            MaterialPageRoute(
+              builder: (context) => const AppShell(showOnboarding: true),
+            ),
           );
         }
       }

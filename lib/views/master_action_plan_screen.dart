@@ -36,7 +36,14 @@ final exportLoadingProvider = StateProvider<bool>((ref) => false);
 // -----------------------------------------------------------
 
 class MasterActionPlanContent extends ConsumerStatefulWidget {
-  const MasterActionPlanContent({super.key});
+  final GlobalKey? downloadButtonKey;
+  final bool showDownloadPlaceholder;
+
+  const MasterActionPlanContent({
+    super.key,
+    this.downloadButtonKey,
+    this.showDownloadPlaceholder = false,
+  });
 
   @override
   ConsumerState<MasterActionPlanContent> createState() =>
@@ -140,19 +147,22 @@ class _MasterActionPlanContentState
           title: 'Master Action Plan',
           subtitle: 'Official signed-off PDF blueprint for disaster operations',
           actions: [
-            if (result != null)
-              OutlinedButton.icon(
-                onPressed: isExporting
-                    ? null
-                    : () => _handleDownloadPdf(result),
-                icon: isExporting
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.picture_as_pdf_outlined, size: 15),
-                label: Text(isExporting ? 'Generating...' : 'Download PDF'),
+            if (result != null || widget.showDownloadPlaceholder)
+              KeyedSubtree(
+                key: widget.downloadButtonKey,
+                child: OutlinedButton.icon(
+                  onPressed: result == null || isExporting
+                      ? null
+                      : () => _handleDownloadPdf(result),
+                  icon: isExporting
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.picture_as_pdf_outlined, size: 15),
+                  label: Text(isExporting ? 'Generating...' : 'Download PDF'),
+                ),
               ),
           ],
         ),

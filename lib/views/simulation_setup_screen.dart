@@ -31,7 +31,14 @@ final _prepWindowProvider = StateProvider<String>((ref) => '24 Hours');
 // -----------------------------------------------------------
 
 class SimulationSetupContent extends ConsumerStatefulWidget {
-  const SimulationSetupContent({super.key});
+  final GlobalKey? classificationKey;
+  final GlobalKey? runSimulationButtonKey;
+
+  const SimulationSetupContent({
+    super.key,
+    this.classificationKey,
+    this.runSimulationButtonKey,
+  });
 
   @override
   ConsumerState<SimulationSetupContent> createState() =>
@@ -159,7 +166,10 @@ class _SimulationSetupContentState
                   ),
                 ),
                 const SizedBox(height: 14),
-                _ProfileSelector(),
+                KeyedSubtree(
+                  key: widget.classificationKey,
+                  child: const _ProfileSelector(),
+                ),
                 const SizedBox(height: 28),
 
                 // 2. Wind Condition (TCWS)
@@ -174,10 +184,7 @@ class _SimulationSetupContentState
                 const SizedBox(height: 6),
                 const Text(
                   'Select the Tropical Cyclone Wind Signal. This only affects wind speed.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF6B7280),
-                  ),
+                  style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
                 ),
                 const SizedBox(height: 14),
                 const _WindSignalSelector(),
@@ -195,10 +202,7 @@ class _SimulationSetupContentState
                 const SizedBox(height: 6),
                 const Text(
                   'Select rainfall intensity based on the Heavy Rainfall Outlook. Independent of wind signal.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF6B7280),
-                  ),
+                  style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
                 ),
                 const SizedBox(height: 14),
                 const _RainfallSelector(),
@@ -221,15 +225,18 @@ class _SimulationSetupContentState
                 if (isMobile) ...[
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _runSimulation,
-                      icon: const Icon(Icons.play_arrow_rounded, size: 18),
-                      label: const Text('Run Simulation'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1D4ED8),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 14,
+                    child: KeyedSubtree(
+                      key: widget.runSimulationButtonKey,
+                      child: ElevatedButton.icon(
+                        onPressed: _runSimulation,
+                        icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                        label: const Text('Run Simulation'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1D4ED8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 14,
+                          ),
                         ),
                       ),
                     ),
@@ -252,15 +259,18 @@ class _SimulationSetupContentState
                         label: const Text('Reset Parameters'),
                       ),
                       const Spacer(),
-                      ElevatedButton.icon(
-                        onPressed: _runSimulation,
-                        icon: const Icon(Icons.play_arrow_rounded, size: 18),
-                        label: const Text('Run Simulation'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1D4ED8),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 14,
+                      KeyedSubtree(
+                        key: widget.runSimulationButtonKey,
+                        child: ElevatedButton.icon(
+                          onPressed: _runSimulation,
+                          icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                          label: const Text('Run Simulation'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1D4ED8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 14,
+                            ),
                           ),
                         ),
                       ),
@@ -282,6 +292,8 @@ class _SimulationSetupContentState
 // -----------------------------------------------------------
 
 class _ProfileSelector extends ConsumerWidget {
+  const _ProfileSelector();
+
   static const _profiles = [
     _Profile(
       SimProfile.hydrologicFlood,
@@ -474,8 +486,7 @@ class _WindSignalSelector extends ConsumerWidget {
             child: _WindChip(
               preset: preset,
               isSelected: selected == preset,
-              onTap: () =>
-                  ref.read(windPresetProvider.notifier).state = preset,
+              onTap: () => ref.read(windPresetProvider.notifier).state = preset,
             ),
           );
         }).toList(),
@@ -491,8 +502,7 @@ class _WindSignalSelector extends ConsumerWidget {
             child: _WindChip(
               preset: preset,
               isSelected: selected == preset,
-              onTap: () =>
-                  ref.read(windPresetProvider.notifier).state = preset,
+              onTap: () => ref.read(windPresetProvider.notifier).state = preset,
             ),
           ),
         );
@@ -514,10 +524,10 @@ class _WindChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor =
-        isSelected ? const Color(0xFF0EA5E9) : const Color(0xFFE5E7EB);
-    final bgColor =
-        isSelected ? const Color(0xFFEFF6FF) : Colors.white;
+    final borderColor = isSelected
+        ? const Color(0xFF0EA5E9)
+        : const Color(0xFFE5E7EB);
+    final bgColor = isSelected ? const Color(0xFFEFF6FF) : Colors.white;
 
     return GestureDetector(
       onTap: onTap,
@@ -669,10 +679,10 @@ class _RainfallChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor =
-        isSelected ? const Color(0xFF0EA5E9) : const Color(0xFFE5E7EB);
-    final bgColor =
-        isSelected ? const Color(0xFFEFF6FF) : Colors.white;
+    final borderColor = isSelected
+        ? const Color(0xFF0EA5E9)
+        : const Color(0xFFE5E7EB);
+    final bgColor = isSelected ? const Color(0xFFEFF6FF) : Colors.white;
 
     return GestureDetector(
       onTap: onTap,
@@ -798,8 +808,7 @@ class _AdditionalParametersForm extends ConsumerWidget {
               '3 Months',
               '6 Months',
             ],
-            onChanged: (v) =>
-                ref.read(_prepWindowProvider.notifier).state = v!,
+            onChanged: (v) => ref.read(_prepWindowProvider.notifier).state = v!,
           ),
         ],
       ),

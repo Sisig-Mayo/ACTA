@@ -7,6 +7,8 @@
 /// Target Branch : feat/dashboard
 library;
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -252,19 +254,206 @@ ThemeData buildDashboardTheme() {
 // -----------------------------------------------------------
 
 class AppShell extends ConsumerWidget {
-  const AppShell({super.key});
+  final bool showOnboarding;
+
+  const AppShell({super.key, this.showOnboarding = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Theme(data: buildDashboardTheme(), child: const _ShellScaffold());
+    return Theme(
+      data: buildDashboardTheme(),
+      child: _ShellScaffold(showOnboarding: showOnboarding),
+    );
   }
 }
 
-class _ShellScaffold extends ConsumerWidget {
-  const _ShellScaffold();
+class _ShellScaffold extends ConsumerStatefulWidget {
+  final bool showOnboarding;
+
+  const _ShellScaffold({required this.showOnboarding});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ShellScaffold> createState() => _ShellScaffoldState();
+}
+
+class _ShellScaffoldState extends ConsumerState<_ShellScaffold> {
+  late final List<GlobalKey> _navTileKeys;
+  final _classificationKey = GlobalKey();
+  final _runSimulationButtonKey = GlobalKey();
+  final _downloadButtonKey = GlobalKey();
+  bool _onboardingVisible = false;
+  int _onboardingStepIndex = 0;
+  Rect? _onboardingTargetRect;
+
+  static const _onboardingSteps = [
+    _OnboardingStep(
+      navIndex: 0,
+      target: _OnboardingTarget.commandCenter,
+      icon: Icons.grid_view_rounded,
+      title: 'Command Center',
+      body:
+          'Review the live operational picture, current alerts, risk map, and resource baseline from one place.',
+    ),
+    _OnboardingStep(
+      navIndex: 1,
+      target: _OnboardingTarget.simulation,
+      icon: Icons.science_outlined,
+      title: 'Simulation',
+      body:
+          'Move into Simulation when you are ready to configure a scenario and model the hazard impact.',
+    ),
+    _OnboardingStep(
+      navIndex: 1,
+      target: _OnboardingTarget.classification,
+      icon: Icons.category_outlined,
+      title: 'Select Classification',
+      body:
+          'Choose the simulation classification first. Flood is available now, while other classifications can be enabled later.',
+    ),
+    _OnboardingStep(
+      navIndex: 1,
+      target: _OnboardingTarget.runSimulation,
+      icon: Icons.play_arrow_rounded,
+      title: 'Run Simulation',
+      body:
+          'Use Run Simulation after the classification, wind, rainfall, and preparation window are set.',
+    ),
+    _OnboardingStep(
+      navIndex: 4,
+      target: _OnboardingTarget.masterPlan,
+      icon: Icons.article_outlined,
+      title: 'Master Plan',
+      body:
+          'Open Master Plan to review the generated blueprint, task ledger, approval status, and verification details.',
+    ),
+    _OnboardingStep(
+      navIndex: 4,
+      target: _OnboardingTarget.downloadButton,
+      icon: Icons.picture_as_pdf_outlined,
+      title: 'Download PDF',
+      body:
+          'When a plan has been generated, this button exports the official disaster action plan as a PDF.',
+    ),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _navTileKeys = List.generate(_Sidebar.navItemCount, (_) => GlobalKey());
+    if (widget.showOnboarding) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _startOnboarding());
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _ShellScaffold oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.showOnboarding && widget.showOnboarding) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _startOnboarding());
+    }
+  }
+
+  void _startOnboarding() {
+    if (!mounted) return;
+    setState(() {
+      _onboardingVisible = true;
+      _onboardingStepIndex = 0;
+    });
+    ref.read(shellIndexProvider.notifier).state =
+        _onboardingSteps.first.navIndex;
+    ref.read(runSimulationActiveProvider.notifier).state = false;
+    _refreshOnboardingTarget();
+  }
+
+  void _refreshOnboardingTarget() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_onboardingVisible) return;
+      final step = _onboardingSteps[_onboardingStepIndex];
+      final key = _keyForOnboardingStep(step);
+      final targetContext = key.currentContext;
+      if (targetContext != null) {
+        Scrollable.ensureVisible(
+          targetContext,
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOutCubic,
+          alignment: 0.45,
+        ).then((_) {
+          if (mounted && _onboardingVisible) {
+            _measureOnboardingTarget(key);
+          }
+        });
+        return;
+      }
+
+      _measureOnboardingTarget(key);
+    });
+  }
+
+  void _measureOnboardingTarget(GlobalKey key) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_onboardingVisible) return;
+      final targetContext = key.currentContext;
+      final renderObject = targetContext?.findRenderObject();
+      if (renderObject is! RenderBox || !renderObject.hasSize) {
+        final isMobile = MediaQuery.of(context).size.width < 768;
+        setState(() {
+          _onboardingTargetRect = isMobile
+              ? const Rect.fromLTWH(14, 28, 44, 44)
+              : const Rect.fromLTWH(12, 116, 176, 42);
+        });
+        return;
+      }
+
+      final offset = renderObject.localToGlobal(Offset.zero);
+      setState(() {
+        _onboardingTargetRect = offset & renderObject.size;
+      });
+    });
+  }
+
+  GlobalKey _keyForOnboardingStep(_OnboardingStep step) {
+    return switch (step.target) {
+      _OnboardingTarget.classification => _classificationKey,
+      _OnboardingTarget.runSimulation => _runSimulationButtonKey,
+      _OnboardingTarget.downloadButton => _downloadButtonKey,
+      _ => _navTileKeys[step.navIndex],
+    };
+  }
+
+  void _goToOnboardingStep(int index) {
+    final safeIndex = index.clamp(0, _onboardingSteps.length - 1);
+    final step = _onboardingSteps[safeIndex];
+    ref.read(shellIndexProvider.notifier).state = step.navIndex;
+    final simState = ref.read(simulationRunStateProvider);
+    if (simState != SimulationRunState.running) {
+      ref.read(runSimulationActiveProvider.notifier).state = false;
+    }
+    setState(() {
+      _onboardingStepIndex = safeIndex;
+    });
+    _refreshOnboardingTarget();
+  }
+
+  void _nextOnboardingStep() {
+    if (_onboardingStepIndex >= _onboardingSteps.length - 1) {
+      setState(() {
+        _onboardingVisible = false;
+        _onboardingTargetRect = null;
+      });
+      return;
+    }
+    _goToOnboardingStep(_onboardingStepIndex + 1);
+  }
+
+  void _skipOnboarding() {
+    setState(() {
+      _onboardingVisible = false;
+      _onboardingTargetRect = null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final selectedIndex = ref.watch(shellIndexProvider);
     final isRunSim = ref.watch(runSimulationActiveProvider);
     final simState = ref.watch(simulationRunStateProvider);
@@ -280,10 +469,16 @@ class _ShellScaffold extends ConsumerWidget {
     } else {
       pageContent = switch (selectedIndex) {
         0 => const CommandCenterContent(),
-        1 => const SimulationSetupContent(),
+        1 => SimulationSetupContent(
+          classificationKey: _classificationKey,
+          runSimulationButtonKey: _runSimulationButtonKey,
+        ),
         2 => const AiActionPlanContent(),
         3 => const ResourceManagementContent(),
-        4 => const MasterActionPlanContent(),
+        4 => MasterActionPlanContent(
+          downloadButtonKey: _downloadButtonKey,
+          showDownloadPlaceholder: _onboardingVisible,
+        ),
         _ => const CommandCenterContent(),
       };
     }
@@ -299,15 +494,54 @@ class _ShellScaffold extends ConsumerWidget {
         children: [
           Row(
             children: [
-              if (!isMobile) _Sidebar(selectedIndex: selectedIndex),
+              if (!isMobile)
+                _Sidebar(
+                  selectedIndex: selectedIndex,
+                  navTileKeys: _navTileKeys,
+                ),
               Expanded(child: pageContent),
             ],
           ),
           if (settingsVisible) const _SettingsOverlay(),
+          if (_onboardingVisible)
+            _OnboardingOverlay(
+              step: _onboardingSteps[_onboardingStepIndex],
+              stepIndex: _onboardingStepIndex,
+              totalSteps: _onboardingSteps.length,
+              targetRect: _onboardingTargetRect,
+              onNext: _nextOnboardingStep,
+              onSkip: _skipOnboarding,
+              onTargetTap: _nextOnboardingStep,
+            ),
         ],
       ),
     );
   }
+}
+
+class _OnboardingStep {
+  final int navIndex;
+  final _OnboardingTarget target;
+  final IconData icon;
+  final String title;
+  final String body;
+
+  const _OnboardingStep({
+    required this.navIndex,
+    required this.target,
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
+}
+
+enum _OnboardingTarget {
+  commandCenter,
+  simulation,
+  classification,
+  runSimulation,
+  masterPlan,
+  downloadButton,
 }
 
 // -----------------------------------------------------------
@@ -319,7 +553,9 @@ const _kSidebarWidth = 200.0;
 
 class _Sidebar extends ConsumerWidget {
   final int selectedIndex;
-  const _Sidebar({required this.selectedIndex});
+  final List<GlobalKey>? navTileKeys;
+
+  const _Sidebar({required this.selectedIndex, this.navTileKeys});
 
   static const _navItems = [
     _NavItem(icon: Icons.grid_view_rounded, label: 'Command Center'),
@@ -328,6 +564,8 @@ class _Sidebar extends ConsumerWidget {
     _NavItem(icon: Icons.inventory_2_outlined, label: 'Resources'),
     _NavItem(icon: Icons.article_outlined, label: 'Master Plan'),
   ];
+
+  static int get navItemCount => _navItems.length;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -359,6 +597,7 @@ class _Sidebar extends ConsumerWidget {
                 itemCount: _navItems.length,
                 itemBuilder: (context, i) {
                   return _NavTile(
+                    key: navTileKeys?[i],
                     item: _navItems[i],
                     isSelected: selectedIndex == i,
                     onTap: () {
@@ -465,6 +704,7 @@ class _NavTile extends StatelessWidget {
   final VoidCallback onTap;
 
   const _NavTile({
+    super.key,
     required this.item,
     required this.isSelected,
     required this.onTap,
@@ -573,6 +813,268 @@ class _BrandHeader extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// -----------------------------------------------------------
+// New Account Onboarding Overlay
+// -----------------------------------------------------------
+
+class _OnboardingOverlay extends StatelessWidget {
+  final _OnboardingStep step;
+  final int stepIndex;
+  final int totalSteps;
+  final Rect? targetRect;
+  final VoidCallback onNext;
+  final VoidCallback onSkip;
+  final VoidCallback onTargetTap;
+
+  const _OnboardingOverlay({
+    required this.step,
+    required this.stepIndex,
+    required this.totalSteps,
+    required this.targetRect,
+    required this.onNext,
+    required this.onSkip,
+    required this.onTargetTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context).size;
+    final target = targetRect ?? const Rect.fromLTWH(12, 116, 176, 42);
+    final ringDiameter = math.max(target.width, target.height) + 26;
+    final ringLeft = (target.center.dx - ringDiameter / 2)
+        .clamp(12.0, math.max(12.0, media.width - ringDiameter - 12))
+        .toDouble();
+    final ringTop = (target.center.dy - ringDiameter / 2)
+        .clamp(12.0, math.max(12.0, media.height - ringDiameter - 12))
+        .toDouble();
+    final panelWidth = media.width < 420 ? media.width - 32 : 340.0;
+    final placeRight = target.right + panelWidth + 24 < media.width;
+    final panelLeft = placeRight
+        ? target.right + 20
+        : (target.left - panelWidth - 20)
+              .clamp(16.0, math.max(16.0, media.width - panelWidth - 16))
+              .toDouble();
+    final panelTop = (target.top - 18)
+        .clamp(16.0, math.max(16.0, media.height - 258))
+        .toDouble();
+    final isLastStep = stepIndex == totalSteps - 1;
+
+    return Positioned.fill(
+      child: Material(
+        color: Colors.transparent,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () {},
+                child: Container(color: Colors.black.withValues(alpha: 0.48)),
+              ),
+            ),
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 420),
+              curve: Curves.easeInOutCubic,
+              left: ringLeft,
+              top: ringTop,
+              width: ringDiameter,
+              height: ringDiameter,
+              child: GestureDetector(
+                onTap: onTargetTap,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 420),
+                  curve: Curves.easeInOutCubic,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.08),
+                    border: Border.all(
+                      color: const Color(0xFF60A5FA),
+                      width: 3,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF1D4ED8).withValues(alpha: 0.35),
+                        blurRadius: 24,
+                        spreadRadius: 8,
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: 9,
+                      height: 9,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF60A5FA),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 420),
+              curve: Curves.easeInOutCubic,
+              left: panelLeft,
+              top: panelTop,
+              width: panelWidth,
+              child: _OnboardingCard(
+                key: ValueKey(stepIndex),
+                step: step,
+                stepIndex: stepIndex,
+                totalSteps: totalSteps,
+                isLastStep: isLastStep,
+                onNext: onNext,
+                onSkip: onSkip,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OnboardingCard extends StatelessWidget {
+  final _OnboardingStep step;
+  final int stepIndex;
+  final int totalSteps;
+  final bool isLastStep;
+  final VoidCallback onNext;
+  final VoidCallback onSkip;
+
+  const _OnboardingCard({
+    super.key,
+    required this.step,
+    required this.stepIndex,
+    required this.totalSteps,
+    required this.isLastStep,
+    required this.onNext,
+    required this.onSkip,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 240),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      child: Container(
+        key: ValueKey(stepIndex),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.18),
+              blurRadius: 26,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1D4ED8).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    step.icon,
+                    color: const Color(0xFF1D4ED8),
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Step ${stepIndex + 1} of $totalSteps',
+                    style: const TextStyle(
+                      color: Color(0xFF6B7280),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Skip tutorial',
+                  onPressed: onSkip,
+                  icon: const Icon(
+                    Icons.close,
+                    size: 18,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              step.title,
+              style: const TextStyle(
+                color: Color(0xFF111827),
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              step.body,
+              style: const TextStyle(
+                color: Color(0xFF475569),
+                fontSize: 13,
+                height: 1.42,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: List.generate(totalSteps, (index) {
+                      final active = index == stepIndex;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 240),
+                        curve: Curves.easeOutCubic,
+                        width: active ? 22 : 7,
+                        height: 7,
+                        margin: const EdgeInsets.only(right: 5),
+                        decoration: BoxDecoration(
+                          color: active
+                              ? const Color(0xFF1D4ED8)
+                              : const Color(0xFFE2E8F0),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+                OutlinedButton(onPressed: onSkip, child: const Text('Skip')),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: onNext,
+                  icon: Icon(
+                    isLastStep
+                        ? Icons.check_rounded
+                        : Icons.arrow_forward_rounded,
+                    size: 16,
+                  ),
+                  label: Text(isLastStep ? 'Finish' : 'Next'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
