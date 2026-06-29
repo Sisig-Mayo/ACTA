@@ -762,6 +762,7 @@ class _BrandHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final displayName = user?.fullName.trim();
     final email = user?.email.trim();
+    final initials = user?.initials.isNotEmpty == true ? user!.initials : 'OP';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
@@ -774,12 +775,12 @@ class _BrandHeader extends StatelessWidget {
               color: const Color(0xFF1D4ED8),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Center(
+            child: Center(
               child: Text(
-                '#',
-                style: TextStyle(
+                initials,
+                style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 16,
+                  fontSize: 13,
                   fontWeight: FontWeight.w800,
                 ),
               ),

@@ -46,6 +46,7 @@ int _progressToStep(int pct) {
 
 const _progressAnimationDuration = Duration(milliseconds: 900);
 const _progressAnimationCurve = Curves.easeInOutCubic;
+const _simulationProgressColor = Color(0xFFFFB703);
 
 // -----------------------------------------------------------
 // Run Simulation Content
@@ -602,10 +603,8 @@ class _MapCard extends StatelessWidget {
                     value: animatedValue.clamp(0.0, 1.0),
                     minHeight: 4,
                     backgroundColor: const Color(0xFFE5E7EB),
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      progressPct >= 100
-                          ? const Color(0xFF1D4ED8)
-                          : const Color(0xFF0EA5E9),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      _simulationProgressColor,
                     ),
                   );
                 },
