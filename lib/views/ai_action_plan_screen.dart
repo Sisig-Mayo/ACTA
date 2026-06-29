@@ -86,7 +86,7 @@ class _AiActionPlanContentState extends ConsumerState<AiActionPlanContent> {
               icon: const Icon(Icons.article_outlined, size: 15),
               label: const Text('Generate Report'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF16A34A),
+                backgroundColor: const Color(0xFF1D4ED8),
               ),
             ),
           ],
@@ -118,13 +118,13 @@ class _EmptyState extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFFF0FDF4),
+              color: const Color(0xFFEFF6FF),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.auto_awesome_outlined,
               size: 48,
-              color: Color(0xFF16A34A),
+              color: Color(0xFF1D4ED8),
             ),
           ),
           const SizedBox(height: 20),
@@ -319,10 +319,10 @@ class _ActionPlanMap extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 5),
-                _legItem(const Color(0xFFDC2626), 'Critical Priority'),
-                _legItem(const Color(0xFFF97316), 'High Priority'),
-                _legItem(const Color(0xFFF59E0B), 'Moderate Priority'),
-                _legItem(const Color(0xFF16A34A), 'Low Priority'),
+                 _legItem(const Color(0xFF1E3A8A), 'Critical Priority'),
+                 _legItem(const Color(0xFF1D4ED8), 'High Priority'),
+                 _legItem(const Color(0xFF2563EB), 'Moderate Priority'),
+                 _legItem(const Color(0xFF0EA5E9), 'Low Priority'),
               ],
             ),
           ),
@@ -390,9 +390,9 @@ class _CompletedBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0FDF4),
+        color: const Color(0xFFEFF6FF),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFBBF7D0)),
+        border: Border.all(color: const Color(0xFF93C5FD)),
       ),
       child: isMobile
           ? Column(
@@ -402,7 +402,7 @@ class _CompletedBanner extends StatelessWidget {
                   children: [
                     const Icon(
                       Icons.check_circle,
-                      color: Color(0xFF16A34A),
+                      color: Color(0xFF1D4ED8),
                       size: 20,
                     ),
                     const SizedBox(width: 10),
@@ -415,14 +415,14 @@ class _CompletedBanner extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF15803D),
+                              color: Color(0xFF1E3A8A),
                             ),
                           ),
                           Text(
                             label,
                             style: const TextStyle(
                               fontSize: 11,
-                              color: Color(0xFF4ADE80),
+                              color: Color(0xFF60A5FA),
                             ),
                           ),
                         ],
@@ -438,11 +438,11 @@ class _CompletedBanner extends StatelessWidget {
                     icon: const Icon(
                       Icons.open_in_new,
                       size: 13,
-                      color: Color(0xFF16A34A),
+                      color: Color(0xFF1D4ED8),
                     ),
                     label: const Text(
                       'View Simulation Results',
-                      style: TextStyle(color: Color(0xFF16A34A), fontSize: 12),
+                      style: TextStyle(color: Color(0xFF1D4ED8), fontSize: 12),
                     ),
                     style: TextButton.styleFrom(
                       alignment: Alignment.centerLeft,
@@ -456,7 +456,7 @@ class _CompletedBanner extends StatelessWidget {
               children: [
                 const Icon(
                   Icons.check_circle,
-                  color: Color(0xFF16A34A),
+                  color: Color(0xFF1D4ED8),
                   size: 20,
                 ),
                 const SizedBox(width: 10),
@@ -468,14 +468,14 @@ class _CompletedBanner extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF15803D),
+                        color: Color(0xFF1E3A8A),
                       ),
                     ),
                     Text(
                       label,
                       style: const TextStyle(
                         fontSize: 11,
-                        color: Color(0xFF4ADE80),
+                        color: Color(0xFF60A5FA),
                       ),
                     ),
                   ],
@@ -486,11 +486,11 @@ class _CompletedBanner extends StatelessWidget {
                   icon: const Icon(
                     Icons.open_in_new,
                     size: 13,
-                    color: Color(0xFF16A34A),
+                    color: Color(0xFF1D4ED8),
                   ),
                   label: const Text(
                     'View Simulation Results',
-                    style: TextStyle(color: Color(0xFF16A34A), fontSize: 12),
+                    style: TextStyle(color: Color(0xFF1D4ED8), fontSize: 12),
                   ),
                 ),
               ],
@@ -542,17 +542,17 @@ class _PlanSummaryCard extends ConsumerWidget {
           _summaryRow(
             'High Priority Actions',
             '$highPriority',
-            const Color(0xFFDC2626),
+            const Color(0xFF1E3A8A),
           ),
           _summaryRow(
             'Moderate Priority Actions',
             '$moderatePriority',
-            const Color(0xFFF59E0B),
+            const Color(0xFF2563EB),
           ),
           _summaryRow(
             'Low Priority Actions',
             '$lowPriority',
-            const Color(0xFF16A34A),
+            const Color(0xFF0EA5E9),
           ),
           const Divider(height: 16, color: Color(0xFFE5E7EB)),
           _summaryRow('Estimate Resources Needed', '₱ 18.6 M', null),
@@ -570,14 +570,14 @@ class _PlanSummaryCard extends ConsumerWidget {
                     icon: const Icon(
                       Icons.check_circle,
                       size: 15,
-                      color: Color(0xFF16A34A),
+                      color: Color(0xFF1D4ED8),
                     ),
                     label: const Text(
                       'Plan Approved ✓',
-                      style: TextStyle(color: Color(0xFF16A34A)),
+                      style: TextStyle(color: Color(0xFF1D4ED8)),
                     ),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFF16A34A)),
+                      side: const BorderSide(color: Color(0xFF1D4ED8)),
                     ),
                   )
                 : ElevatedButton.icon(
@@ -586,7 +586,7 @@ class _PlanSummaryCard extends ConsumerWidget {
                     icon: const Icon(Icons.thumb_up_outlined, size: 15),
                     label: const Text('Approve Plan'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF16A34A),
+                      backgroundColor: const Color(0xFF1D4ED8),
                     ),
                   ),
           ),
@@ -693,24 +693,24 @@ class _AiSummaryCard extends StatelessWidget {
                   Icons.people_outline,
                   '623,410',
                   'Population\nat Risk',
-                  const Color(0xFFDC2626),
-                  const Color(0xFFFEF2F2),
+                  const Color(0xFF1E3A8A),
+                  const Color(0xFFDBEAFE),
                 ),
                 _statChip(
                   context,
                   Icons.location_city_outlined,
                   '$criticalCount',
                   'High/Critical\nBarangays',
-                  const Color(0xFFF59E0B),
-                  const Color(0xFFFFFBEB),
+                  const Color(0xFF2563EB),
+                  const Color(0xFFEFF6FF),
                 ),
                 _statChip(
                   context,
                   Icons.verified_outlined,
                   '92%',
                   'Impact\nReduction',
-                  const Color(0xFF16A34A),
-                  const Color(0xFFF0FDF4),
+                  const Color(0xFF0EA5E9),
+                  const Color(0xFFF0F9FF),
                 ),
               ],
             ),
@@ -743,8 +743,8 @@ class _AiSummaryCard extends StatelessWidget {
                       Icons.people_outline,
                       '623,410',
                       'Population at Risk',
-                      const Color(0xFFDC2626),
-                      const Color(0xFFFEF2F2),
+                      const Color(0xFF1E3A8A),
+                      const Color(0xFFDBEAFE),
                     ),
                     const SizedBox(width: 12),
                     _statChip(
@@ -752,8 +752,8 @@ class _AiSummaryCard extends StatelessWidget {
                       Icons.location_city_outlined,
                       '$criticalCount',
                       'High/Critical\nBarangays',
-                      const Color(0xFFF59E0B),
-                      const Color(0xFFFFFBEB),
+                      const Color(0xFF2563EB),
+                      const Color(0xFFEFF6FF),
                     ),
                     const SizedBox(width: 12),
                     _statChip(
@@ -761,8 +761,8 @@ class _AiSummaryCard extends StatelessWidget {
                       Icons.verified_outlined,
                       '92%',
                       'Potential Impact\nReduction',
-                      const Color(0xFF16A34A),
-                      const Color(0xFFF0FDF4),
+                      const Color(0xFF0EA5E9),
+                      const Color(0xFFF0F9FF),
                     ),
                   ],
                 ),
