@@ -24,11 +24,11 @@ import '../models/simulation_models.dart';
 const _kManilaCtr = LatLng(14.5928, 120.9762);
 
 const _priorityAreas = [
-  _RiskArea('Tondo', 'High Risk', Color(0xFFDC2626), 'Coastal flooding, dense population'),
-  _RiskArea('Sampaloc', 'Moderate Risk', Color(0xFFF59E0B), 'Drainage overflow history'),
-  _RiskArea('Pandacan', 'Moderate Risk', Color(0xFFF59E0B), 'River proximity'),
-  _RiskArea('Paco', 'Moderate Risk', Color(0xFFF59E0B), 'Low-lying roads'),
-  _RiskArea('Malate', 'Low Risk', Color(0xFF16A34A), 'Shelter access nearby'),
+  _RiskArea('Tondo', 'High Risk', Color(0xFF1E3A8A), 'Coastal flooding, dense population'),
+  _RiskArea('Sampaloc', 'Moderate Risk', Color(0xFF2563EB), 'Drainage overflow history'),
+  _RiskArea('Pandacan', 'Moderate Risk', Color(0xFF2563EB), 'River proximity'),
+  _RiskArea('Paco', 'Moderate Risk', Color(0xFF2563EB), 'Low-lying roads'),
+  _RiskArea('Malate', 'Low Risk', Color(0xFF0EA5E9), 'Shelter access nearby'),
 ];
 
 class _RiskArea {
@@ -116,7 +116,7 @@ class _CommandCenterContentState
               icon: const Icon(Icons.article_outlined, size: 15),
               label: const Text('Generate Report'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF16A34A),
+                backgroundColor: const Color(0xFF1D4ED8),
               ),
             ),
           ],
@@ -306,13 +306,13 @@ class _OverviewTab extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _legendItem(const Color(0xFFEF4444), 'High Risk (Red)'),
+                  _legendItem(const Color(0xFF1E3A8A), 'High Risk (Dark Blue)'),
                   const SizedBox(height: 4),
-                  _legendItem(const Color(0xFFF59E0B), 'Moderate Risk (Yellow)'),
+                  _legendItem(const Color(0xFF2563EB), 'Moderate Risk (Blue)'),
                   const SizedBox(height: 4),
-                  _legendItem(const Color(0xFF16A34A), 'Low Risk (Green)'),
+                  _legendItem(const Color(0xFF0EA5E9), 'Low Risk (Light Blue)'),
                   const SizedBox(height: 4),
-                  _legendItem(const Color(0xFF0EA5E9), 'Baseline'),
+                  _legendItem(const Color(0xFF38BDF8), 'Baseline'),
                 ],
               ),
             ),
@@ -679,9 +679,9 @@ class _AlertCard extends StatelessWidget {
   const _AlertCard({required this.alert});
 
   Color get _color => switch (alert.level) {
-        'HIGH' => const Color(0xFFDC2626),
-        'MODERATE' => const Color(0xFFF59E0B),
-        _ => const Color(0xFF16A34A),
+        'HIGH' => const Color(0xFF1E3A8A),
+        'MODERATE' => const Color(0xFF2563EB),
+        _ => const Color(0xFF0EA5E9),
       };
 
   @override
@@ -735,9 +735,9 @@ class _AlertCard extends StatelessWidget {
 class _ResourcesOverviewTab extends StatelessWidget {
   static const _resources = [
     ('Pumping Stations', '12', '9 Online, 3 Offline', Color(0xFF0EA5E9)),
-    ('Rescue Boats', '64', '52 Ready, 12 Deployed', Color(0xFF16A34A)),
-    ('Evacuation Centers', '42', '38 Open, 4 At Capacity', Color(0xFF8B5CF6)),
-    ('Medical Teams', '24', '18 On Standby', Color(0xFFF59E0B)),
+    ('Rescue Boats', '64', '52 Ready, 12 Deployed', Color(0xFF60A5FA)),
+    ('Evacuation Centers', '42', '38 Open, 4 At Capacity', Color(0xFF2563EB)),
+    ('Medical Teams', '24', '18 On Standby', Color(0xFF1D4ED8)),
   ];
 
   @override
