@@ -29,12 +29,15 @@ ACTA supports a Manila LGU flood preparedness workflow:
 - Monitor operational context in a Command Center with barangay risk maps,
   alerts, priority areas, and resource summaries.
 - Configure hydrologic flood simulations with wind, rainfall, preparation
-  window, storm track, and storm radius inputs.
+  window, and storm track assumptions. The backend also supports an impact
+  radius parameter.
 - Run simulations asynchronously through FastAPI and store status/results in
   Supabase.
 - Score barangays into green, yellow, and red risk zones.
 - Generate time-decayed response tasks based on the remaining preparation
   window.
+- Continue prototype walkthroughs with a local **Use Demo Result** fallback when
+  external services are unavailable.
 - Produce Gemini-assisted action plans with explainability cards and an
   auditable LLM context snapshot, with deterministic fallback output when Gemini
   is unavailable.
@@ -55,7 +58,7 @@ The LLM pipeline assembles all available basic parameters and simulation data in
 
 ```mermaid
 flowchart TD
-    A([LGU Operator\nDashboard]) -->|SimulationInput\nwind · rain · prep_window\nstorm_track · radius| B
+    A([LGU Operator\nDashboard]) -->|SimulationInput\nwind · rain · prep_window\nstorm_track · radius_km| B
 
     subgraph PIPELINE ["⚙️  Background Simulation Pipeline  (risk_pipeline.py)"]
         direction TB
@@ -73,7 +76,7 @@ flowchart TD
 
             F["⑤ Context Assembly\nassemble_llm_context()"] 
 
-            F --> S1["📋 Section 1\nBasic Parameters\nwind · rain · prep_window\nstorm_track · radius"]
+            F --> S1["📋 Section 1\nBasic Parameters\nwind · rain · prep_window\nstorm_track · radius_km"]
             F --> S2["📊 Section 2\nSimulation Results\nseverity_tier · zone counts\nTop-15 risk barangays\n+ per-score breakdowns"]
             F --> S3["🏗️ Section 3\nInfrastructure Status\npumping stations\ndrainage gates\noperational / offline"]
             F --> S4["📝 Section 4\nTemplate Tasks\ndecay-engine baselines\nfor LLM refinement"]
@@ -284,6 +287,13 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 # From repo root (Flutter project root)
 flutter pub get
 flutter run -d chrome  # or target device
+```
+
+The frontend defaults to the deployed ACTA backend. To target a local backend,
+pass `ACTA_API_BASE_URL`:
+
+```bash
+flutter run -d chrome --dart-define=ACTA_API_BASE_URL=http://localhost:8000
 ```
 
 ## Directory Structure

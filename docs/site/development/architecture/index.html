@@ -166,9 +166,14 @@ management.</p>
 <li><code>google_fonts</code> for typography.</li>
 <li><code>json_annotation</code> tooling for structured models.</li>
 </ul>
-<p>Several frontend files currently use <code>http://localhost:8000</code> directly as the
-backend base URL. Replace those constants with environment-specific
-configuration before deploying beyond local development.</p>
+<p>Frontend API clients use <code>ApiConfig.baseUrl</code> from <code>lib/config/api_config.dart</code>.
+The default points at the deployed ACTA backend and can be overridden with the
+<code>ACTA_API_BASE_URL</code> Dart define for local development, staging, or alternate
+deployments.</p>
+<p>Simulation Setup also includes an explicit prototype fallback path. The <code>Use
+Demo Result</code> action loads <code>lib/models/demo_simulation.dart</code>, populates the same
+Riverpod result providers used by completed backend runs, and navigates to the
+AI Action Plan without calling backend APIs.</p>
 <h2 id="backend">Backend<a class="headerlink" href="#backend" title="Permanent link">&para;</a></h2>
 <p>The FastAPI entry point is <code>backend/main.py</code>. It registers these routers:</p>
 <ul>
@@ -212,6 +217,8 @@ seed scripts.</p>
 <li>Ask Gemini to refine the action plan, or use the fallback template response.</li>
 <li>Store results, explainability data, LLM output, and context snapshots.</li>
 </ol>
+<p>The local demo result path is outside this backend pipeline. It is presentation
+support only and should not be treated as a stored <code>simulation_runs</code> record.</p>
 <h2 id="llm-boundary">LLM Boundary<a class="headerlink" href="#llm-boundary" title="Permanent link">&para;</a></h2>
 <p>Gemini is an enhancement layer, not the only source of action plans. The backend
 contains a fallback response path so simulation results can still complete when

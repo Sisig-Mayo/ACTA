@@ -13,6 +13,7 @@ ACTA/
 ├── windows/                     # Flutter Windows runner
 ├── lib/                         # Flutter application code
 │   ├── assets/
+│   ├── config/
 │   ├── models/
 │   ├── utils/
 │   └── views/
@@ -48,6 +49,10 @@ ACTA/
 : Initializes `ProviderScope`, configures the ACTA dark theme, and starts at
   `LoginScreen`.
 
+`lib/config/`
+
+: Contains frontend runtime configuration such as `ApiConfig.baseUrl`.
+
 `lib/views/`
 
 : Contains operator-facing screens such as login, command center, simulation
@@ -57,7 +62,8 @@ ACTA/
 `lib/models/`
 
 : Contains frontend state and data models for simulation, barangays, and user
-  profile handling.
+  profile handling. `demo_simulation.dart` contains the explicit local demo
+  result used for prototype walkthroughs when the backend is unavailable.
 
 `lib/utils/`
 

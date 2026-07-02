@@ -37,6 +37,12 @@ The repository is a multi-part application:
 6. Results are stored in Supabase and returned to the dashboard for review,
    export, and dispatch.
 
+For prototype presentations, the Flutter dashboard also includes an explicit
+local demo result path. **Use Demo Result** in Simulation Setup loads a
+representative flood scenario without calling backend APIs, keeping the review,
+AI Action Plan, and Master Action Plan screens available when external services
+are unavailable.
+
 ## Main Components
 
 | Component | Location | Purpose |

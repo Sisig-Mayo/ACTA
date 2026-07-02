@@ -179,13 +179,19 @@ the variable names from <code>.env.example</code>.</p>
 <li>Barangay GeoJSON seed data has been imported.</li>
 <li>The <code>get_barangays_geojson</code> RPC migration has been applied.</li>
 <li><code>GET /api/v1/barangays/geojson</code> returns a GeoJSON FeatureCollection.</li>
-<li>Browser requests are reaching the backend at <code>http://localhost:8000</code>.</li>
+<li>Browser requests are reaching the URL configured by <code>ApiConfig.baseUrl</code>.</li>
 </ul>
 <h2 id="frontend-cannot-reach-backend">Frontend Cannot Reach Backend<a class="headerlink" href="#frontend-cannot-reach-backend" title="Permanent link">&para;</a></h2>
-<p>The Flutter code currently uses <code>http://localhost:8000</code> in multiple files. That
-works for Chrome and desktop apps running on the same machine as the backend.</p>
+<p>The Flutter code uses <code>ApiConfig.baseUrl</code> from <code>lib/config/api_config.dart</code>.
+The default points at the deployed ACTA backend. Override it with
+<code>ACTA_API_BASE_URL</code> when running against a local or staging backend:</p>
+<pre><code class="language-sh">flutter run -d chrome --dart-define=ACTA_API_BASE_URL=http://localhost:8000
+</code></pre>
 <p>For Android emulators, iOS simulators, physical devices, or deployed builds,
-configure a reachable backend URL for that target.</p>
+use a backend URL reachable from that target.</p>
+<p>During prototype demos, use <strong>Use Demo Result</strong> in Simulation Setup if external
+network access is unavailable. This only loads local representative result data;
+it does not verify backend health.</p>
 <h2 id="gemini-output-is-missing">Gemini Output Is Missing<a class="headerlink" href="#gemini-output-is-missing" title="Permanent link">&para;</a></h2>
 <p>If <code>GEMINI_API_KEY</code> is empty or Gemini returns an error, ACTA uses fallback
 template action-plan output. Check the <code>generated_by</code> field through:</p>

@@ -148,10 +148,18 @@ flutter run -d windows
 </code></pre>
 <p>Mobile targets require an emulator, simulator, or connected device.</p>
 <h2 id="local-backend-url">Local Backend URL<a class="headerlink" href="#local-backend-url" title="Permanent link">&para;</a></h2>
-<p>The current Flutter code calls <code>http://localhost:8000</code> directly in several
-screens and providers. This works for Chrome and desktop local development.</p>
-<p>For Android emulators, iOS simulators, physical devices, or deployed builds,
-replace those hardcoded base URLs with target-appropriate configuration.</p>
+<p>The Flutter frontend reads its backend URL from <code>lib/config/api_config.dart</code>.
+The default is the deployed ACTA backend:</p>
+<pre><code class="language-text">https://acta-production.up.railway.app
+</code></pre>
+<p>Override it at build or run time with <code>ACTA_API_BASE_URL</code>:</p>
+<pre><code class="language-sh">flutter run -d chrome --dart-define=ACTA_API_BASE_URL=http://localhost:8000
+flutter build web --dart-define=ACTA_API_BASE_URL=https://api.example.com
+</code></pre>
+<p>Use a URL that is reachable from the target device. Chrome and desktop apps can
+use <code>http://localhost:8000</code> when the backend is running on the same machine.
+Android emulators, iOS simulators, physical devices, and deployed web builds
+usually need a different host.</p>
 <h2 id="typical-operator-flow">Typical Operator Flow<a class="headerlink" href="#typical-operator-flow" title="Permanent link">&para;</a></h2>
 <ol>
 <li>Start the backend on port <code>8000</code>.</li>
@@ -162,6 +170,10 @@ replace those hardcoded base URLs with target-appropriate configuration.</p>
 <li>Review results, AI action plan, master action plan, and export/dispatch
    actions.</li>
 </ol>
+<p>For prototype demonstrations, Simulation Setup also includes <strong>Use Demo
+Result</strong>. This loads a local representative flood scenario and jumps directly to
+the AI Action Plan. It is intended as a presentation fallback when the network
+or backend is unavailable; it does not call the simulation API.</p>
 <h2 id="build-commands">Build Commands<a class="headerlink" href="#build-commands" title="Permanent link">&para;</a></h2>
 <p>Common Flutter build commands:</p>
 <pre><code class="language-sh">flutter build web

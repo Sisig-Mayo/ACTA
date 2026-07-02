@@ -16,6 +16,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../config/api_config.dart';
 import '../models/simulation_models.dart';
 import '../models/simulation_state.dart';
 import '../models/barangay_provider.dart';
@@ -46,6 +47,7 @@ int _progressToStep(int pct) {
 
 const _progressAnimationDuration = Duration(milliseconds: 900);
 const _progressAnimationCurve = Curves.easeInOutCubic;
+const _simulationProgressColor = Color(0xFFFFB703);
 
 // -----------------------------------------------------------
 // Run Simulation Content
@@ -63,7 +65,7 @@ class _RunSimulationContentState extends ConsumerState<RunSimulationContent> {
   Timer? _pollTimer;
   final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: 'https://acta-production.up.railway.app',
+      baseUrl: ApiConfig.baseUrl,
       connectTimeout: const Duration(seconds: 60),
       receiveTimeout: const Duration(seconds: 30),
     ),
@@ -109,8 +111,7 @@ class _RunSimulationContentState extends ConsumerState<RunSimulationContent> {
         ref.read(simulationRunStateProvider.notifier).state =
             SimulationRunState.error;
       }
-    } catch (e) {
-      print('Polling error: $e');
+    } catch (_) {
       // Silently retry on next poll cycle
     }
   }
@@ -236,15 +237,15 @@ class _RunSimulationContentState extends ConsumerState<RunSimulationContent> {
                     padding: const EdgeInsets.all(16),
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFEE2E2),
+                      color: const Color(0xFFEFF6FF),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFDC2626)),
+                      border: Border.all(color: const Color(0xFF1E3A8A)),
                     ),
                     child: Row(
                       children: [
                         const Icon(
                           Icons.error_outline,
-                          color: Color(0xFFDC2626),
+                          color: Color(0xFF1E3A8A),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -252,7 +253,7 @@ class _RunSimulationContentState extends ConsumerState<RunSimulationContent> {
                             ref.watch(simulationErrorProvider) ??
                                 'An error occurred',
                             style: const TextStyle(
-                              color: Color(0xFFDC2626),
+                              color: Color(0xFF1E3A8A),
                               fontSize: 13,
                             ),
                           ),
@@ -314,7 +315,7 @@ class _StepperBar extends StatelessWidget {
                     width: 24,
                     height: 24,
                     decoration: const BoxDecoration(
-                      color: Color(0xFF16A34A),
+                      color: Color(0xFF1D4ED8),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -328,7 +329,7 @@ class _StepperBar extends StatelessWidget {
                     width: 24,
                     height: 24,
                     decoration: const BoxDecoration(
-                      color: Color(0xFF16A34A),
+                      color: Color(0xFF1D4ED8),
                       shape: BoxShape.circle,
                     ),
                     child: Center(
@@ -373,7 +374,7 @@ class _StepperBar extends StatelessWidget {
                             height: 2,
                             margin: const EdgeInsets.symmetric(horizontal: 4),
                             color: isDone
-                                ? const Color(0xFF16A34A)
+                                ? const Color(0xFF1D4ED8)
                                 : const Color(0xFFE5E7EB),
                           ),
                         ),
@@ -418,7 +419,7 @@ class _StepperBar extends StatelessWidget {
               width: 28,
               height: 28,
               decoration: const BoxDecoration(
-                color: Color(0xFF16A34A),
+                color: Color(0xFF1D4ED8),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.check, color: Colors.white, size: 14),
@@ -428,9 +429,9 @@ class _StepperBar extends StatelessWidget {
               width: 28,
               height: 28,
               decoration: BoxDecoration(
-                color: const Color(0xFF16A34A),
+                color: const Color(0xFF1D4ED8),
                 shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFF16A34A), width: 2),
+                border: Border.all(color: const Color(0xFF1D4ED8), width: 2),
               ),
               child: Center(
                 child: Text(
@@ -489,7 +490,7 @@ class _StepperBar extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 10,
                             color: isActive
-                                ? const Color(0xFF16A34A)
+                                ? const Color(0xFF1D4ED8)
                                 : const Color(0xFF9CA3AF),
                           ),
                         ),
@@ -602,10 +603,8 @@ class _MapCard extends StatelessWidget {
                     value: animatedValue.clamp(0.0, 1.0),
                     minHeight: 4,
                     backgroundColor: const Color(0xFFE5E7EB),
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      progressPct >= 100
-                          ? const Color(0xFF16A34A)
-                          : const Color(0xFF0EA5E9),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      _simulationProgressColor,
                     ),
                   );
                 },
@@ -639,7 +638,8 @@ class _MapCard extends StatelessWidget {
                       ),
                     ),
                     loading: () => const PolygonLayer(polygons: <Polygon>[]),
-                    error: (_, __) => const PolygonLayer(polygons: <Polygon>[]),
+                    error: (_, stackTrace) =>
+                        const PolygonLayer(polygons: <Polygon>[]),
                   ),
                 ],
               ),
@@ -711,22 +711,16 @@ class _SimSummaryCard extends StatelessWidget {
             get('profile', 'Hydrologic Flood'),
           ),
           _row(
+            Icons.air,
+            'Wind Signal',
+            '${get('wind_signal', 'Signal 1')} — ${get('wind_kph', '50')} km/h',
+          ),
+          _row(
             Icons.water_drop_outlined,
-            'Rainfall Volume',
-            '${get('rainfall_mm', '120')} mm',
+            'Rainfall',
+            '${get('rainfall_label', 'Heavy')} — ${get('rainfall_mm', '75')} mm',
           ),
-          _row(Icons.air, 'Wind Speed', '${get('wind_kph', '65')} km/h'),
           _row(Icons.location_city_outlined, 'Coverage', 'All 897 Barangays'),
-          _row(
-            Icons.water_outlined,
-            'Pumping Stations',
-            get('pumping_status', '3 Offline'),
-          ),
-          _row(
-            Icons.directions_boat_outlined,
-            'Rescue Assets',
-            get('rescue_assets', '12 Boats'),
-          ),
           const Divider(height: 16, color: Color(0xFFE5E7EB)),
           _row(Icons.access_time, 'Start Time', _nowLabel()),
         ],
@@ -858,7 +852,7 @@ class _ModelProgressCard extends StatelessWidget {
 
   Widget _progressRow(String label, bool isDone, bool isActive) {
     final color = isDone
-        ? const Color(0xFF16A34A)
+        ? const Color(0xFF1D4ED8)
         : isActive
         ? const Color(0xFF0EA5E9)
         : const Color(0xFF9CA3AF);
